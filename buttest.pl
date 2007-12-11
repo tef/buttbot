@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-require 'butts.pl';
+use Butts qw(buttify);
 
 while(<>) {
 chomp;
