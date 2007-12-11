@@ -2,9 +2,8 @@
 use strict;
 use warnings;
 
+use Butts qw(buttify);
 use IO::Socket;
-require 'butts.pl';
-
 
 ## globals
 use vars qw<$sock %CONF %results $hyp>;
@@ -42,6 +41,9 @@ while (1) {
    
    ($from,$command,@data)=split(/\s+/,$thing);
 
+   $from ||= '';
+   $command ||= '';
+
    if ($from eq "PING") {
 	   if ($command=~/^:\d+$/) {
 	   		&send("PONG $command");
@@ -52,8 +54,6 @@ while (1) {
    
    &error("from server: @data") if ($from eq "ERROR");
  
-   $command ||= '';
-
    if ($command eq "001") {
      &send("JOIN $CONF{channel}") if (defined $CONF{channel});
    } elsif ($command eq "PRIVMSG") {

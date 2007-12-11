@@ -1,10 +1,15 @@
-#!/usr/bin/perl 
+package Butts;
+
 use strict;
 use warnings;
 
+use Exporter;
+use List::Util qw(max);
 use TeX::Hyphen;
-use List::Util 'max';
 
+our @ISA = qw(Exporter);
+
+our @EXPORT_OK = qw(buttify);
 
 our $hyp;
 if ( -e "hyphen.tex") {
@@ -138,3 +143,4 @@ sub weighed_index_array {
 }
 
 1;
+__END__
