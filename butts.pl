@@ -1,4 +1,7 @@
 #!/usr/bin/perl 
+use strict;
+use warnings;
+
 use TeX::Hyphen;
 use List::Util 'max';
 
