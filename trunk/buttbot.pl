@@ -1,5 +1,7 @@
 #!/usr/bin/perl 
 use strict;
+use warnings;
+
 use IO::Socket;
 require 'butts.pl';
 
@@ -50,6 +52,8 @@ while (1) {
    
    &error("from server: @data") if ($from eq "ERROR");
  
+   $command ||= '';
+
    if ($command eq "001") {
      &send("JOIN $CONF{channel}") if (defined $CONF{channel});
    } elsif ($command eq "PRIVMSG") {

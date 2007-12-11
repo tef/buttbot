@@ -1,4 +1,7 @@
 #!/usr/bin/perl
+use strict;
+use warnings;
+
 require 'butts.pl';
 
 while(<>) {
