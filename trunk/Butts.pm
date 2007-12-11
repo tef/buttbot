@@ -92,19 +92,25 @@ sub buttifynew {
 
 sub buttsub {
    my $word = shift @_;
+
+   # split off leading and trailing punctuation
+   my ($lp, $actual_word, $rp) =
+       ($word =~ /^([^A-Za-z]*)(.*?)([^A-Za-z]*)$/);
+
+   return $word unless ($actual_word);
    
-   my @points = $hyp->hyphenate($word);
+   my @points = $hyp->hyphenate($actual_word);
    unshift(@points,0);
 
    my $factor = 2;
    my $len = scalar @points;
    my $replace = $len -1 - int(rand($len ** $factor) ** (1.0/$factor));
-   push @points,length($word);
+   push @points,length($actual_word);
 
    my $l = $points[$replace];
    my $r = $points[$replace+1]- $l ;
-   while (substr($word,$l+$r,1) eq "t") { $r++; }
-   my $sub = substr($word,$l,$r);
+   while (substr($actual_word,$l+$r,1) eq "t") { $r++; }
+   my $sub = substr($actual_word,$l,$r);
    my $butt ="butt";
 
    if ($sub eq uc $sub) {
@@ -112,8 +118,8 @@ sub buttsub {
    } elsif ($sub =~/^[A-Z]/) {
      $butt = "Butt";
    } 
-   substr($word,$l,$r) = $butt;
-   return $word;
+   substr($actual_word,$l,$r) = $butt;
+   return join('', $lp, $actual_word, $rp);
 }
 
 ## perl cookbook
