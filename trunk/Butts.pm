@@ -39,6 +39,7 @@ sub buttify {
    shuffle(\@index) if (scalar @index);
    while ($c < $rep) {
         $words[$index[$c]]=&buttsub($words[$index[$c]]);
+	@index = grep {$_ != $index[$c]} @index;
         $c++;
   }
 
@@ -46,6 +47,7 @@ sub buttify {
 }
 
 sub buttifynew {
+
    my (@words) = (@_);
    my $rep = int(@words/11)+1;
    my $c =0;
@@ -66,6 +68,8 @@ sub buttifynew {
    #print "Stripped Pairs: ".join(",",map{$_->[0]." ".$_->[1]}@pairs)."\n";
   
    #@pairs = map { [$_->[0], rand($factor**$_->[1])**(1.0/$_->[1])]} @pairs;  
+   # possible new algorithm but didn't have a nice as distribution. 
+   # I should draw graphs.
    @pairs = map { [$_->[0], rand($_->[1]**$factor)**(1.0/$factor)]} @pairs;  
    #@pairs = map { [$_->[0], log(rand(exp($_->[1]))+1)]} @pairs;  
 
@@ -109,7 +113,9 @@ sub buttsub {
 
    my $l = $points[$replace];
    my $r = $points[$replace+1]- $l ;
+   
    while (substr($actual_word,$l+$r,1) eq "t") { $r++; }
+   while ($l > 0 && substr($actual_word,$l-1,1) eq "b") { $l--; }
    my $sub = substr($actual_word,$l,$r);
    my $butt ="butt";
 
@@ -118,6 +124,7 @@ sub buttsub {
    } elsif ($sub =~/^[A-Z]/) {
      $butt = "Butt";
    } 
+   
    substr($actual_word,$l,$r) = $butt;
    return join('', $lp, $actual_word, $rp);
 }
