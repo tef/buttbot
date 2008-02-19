@@ -1,0 +1,23 @@
+#summary One-sentence summary of this page.
+
+= Introduction =
+
+List of admin commands that buttbot accepts
+
+
+= Details =
+
+To activate admin mode, PM buttbot with your password.
+
+Commands (used via PM):
+!quote: sends string directly to sever
+!echo: sends string to current configured channel
+!echobutt: same as above, but buttifies message
+!normfreq: changes the frequency normal people get butted
+!enemfreq: changes the freqeuncy enemies get butted
+!addfriend: Friends don't get butted at all.
+!remfriend:
+!addenemy: Enemies get butted more often
+!remenemy:
+
+Adding the word "loud" to the end of an !addfriend, et.al. command will announce the change publicly in channel.
