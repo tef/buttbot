@@ -29,7 +29,7 @@ sub buttify {
    $c=0;
 
    # remove stop words
-   @longest = grep {$words[$_] !~/^(a|an|and|or|but|it|in|its|It's|it's|the|of|you|I|i)$/} @longest;
+   @longest = grep {$words[$_] !~/^(a|an|and|or|but|it|in|its|It's|it's|the|of|you|I|i|[\d\W+]+)$/} @longest;
    # print "Words in order: ".join(",",map {$words[$_]} @longest)."\n";
 
    # create weighed index array of words by length
