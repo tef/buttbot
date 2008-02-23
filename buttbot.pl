@@ -29,25 +29,59 @@ my ($auth, @buffer) ;
 $auth ="";
 @buffer=();
 my ($from,$command,@data);
-#list of enemies (people who get buttified more often) and friends (people who dont get butted.)
-my (@enemies, @friends);
-#frequency that normal people and enemies get butted
-my ($normalfrequency, $enemyfrequency);
+#list of friends (people who get buttified more often) and enemies (people who dont get butted.)
+my (%friends, %enemies);
+#frequency that normal people and friends get butted
+my ($normalfrequency, $friendfrequency);
 #last thing said by someone in the channel
 my (@previousdata);
+my ($previouschannel);
+my (@channels);
+my ($starttime);
+my (%linestotal);
+my (%timeoflastbutting);
+my ($fullstring);
+my $graceperiod = 240;
 #pre-setting frequencies
-$enemyfrequency = 23;
+$friendfrequency = 23;
 $normalfrequency = 37;
+
+#remove whitespace!
+$CONF{channel} =~ s/\s+//;
+
+#add friends from conf file
+if (exists $CONF{friends})
+{
+    @_ = split(/s*,s*/,$CONF{friends});
+    foreach $_ (@_)
+    {
+	$friends{$_} = 1;
+    }
+}
+
+#add enemies from conf file
+if (exists $CONF{enemies})
+{
+    @_ = split(/s*,s*/,$CONF{enemies});
+    foreach $_ (@_)
+    {
+	$enemies{$_} = 1;
+    }
+}
+
 
 #main execution loop
 while (1) {
-
+  #check for errors.
   &error("main: $! $@") if (($! ne "" ) || ($@ ne ""));
-  
+  #Otherwise move through the buffer.
   @buffer=split(/\n/,&gets());
   
   foreach my $thing (@buffer) {
-   
+      print "$thing\n";
+      $fullstring = $thing;
+      #putting the message from $thing into a full string to preserve the whitespace, just in case.
+      $fullstring =~ s/(.*?)\s+(.*?)\s+(.*)/$3/;
    ($from,$command,@data)=split(/\s+/,$thing);
 
    $from ||= '';
@@ -68,16 +102,17 @@ while (1) {
      if (defined $CONF{channel})
 	{
 		&send("JOIN $CONF{channel}") ;
+		$starttime = time;
 		#&send("PRIVMSG $CONF{channel} : BUTTING SYSTEMS ONLINE!");
 	}
    } 
 	#otherwise, if it's a message
 	elsif ($command eq "PRIVMSG") {
 	#get destination of message
-      my $to=shift(@data);
+        my $to=shift(@data);
 	#get first word of message (might be command)
-      my $sub=shift(@data);
-     ## remove preceding ':'
+        my $sub=shift(@data);
+	## remove preceding ':'
 	$sub=~s/^://;
 
 	##if a user private messages the bot...
@@ -93,80 +128,69 @@ while (1) {
 				  &send("PRIVMSG $to :".join(" ",&buttify(@data)));
 			}
 		}
+		
+			#!help helps a brotha out, yo
+			if ($sub eq "!help")
+			{
+			    &send("PRIVMSG $to : Buttbot is a butting robot of the future. Use !butt <message> to buttify a message.");
+			}
+
 		##if the first word in the string is equal to the password, set the user to be the admin
 		if ($sub eq $CONF{pass}) {
 		$auth=$from;
 		}
+
 		##ADMIN FUNCTIONS
 		 if ($auth eq $from)  {
+
 		##if the first word is "!quote", send the string that follows to the server
-		## e.g. "quote PRIVMSG #testing : HELLO" prints out "HELLO" to #testing
+		## e.g. "!quote PRIVMSG #testing : HELLO" prints out "HELLO" to #testing
 			if ($sub eq "!quote" and @data >0 )
 			{
 				&send(@data) ;
 			}
-		##!echo spits out whatever to the channel
-			if ($sub eq "!echo" and @data >0 )
+		##!echo #channel spits out whatever to the channel
+			elsif ($sub eq "!echo" and @data >1 )
 			{
-				&send("PRIVMSG $CONF{channel} :".join(" ",@data));
+			    $_ = shift(@data);
+			    
+				&send("PRIVMSG $_ :".join(" ",@data));
 			}
-		##!echobutt spits out whatever to the channel, but will buttify it
-			if ($sub eq "!echobutt" and @data >0 )
+		##!echobutt #channel spits out whatever to the channel, but will buttify it
+			elsif ($sub eq "!echobutt" and @data >1 )
 			{
-				&send("PRIVMSG $CONF{channel} :".join(" ",&buttify(@data)));
+			    $_ = shift(@data);
+			   
+				&send("PRIVMSG $_ :".join(" ",&buttify(@data)));
+			}
+		#!boom spits out whatever to every channel
+			elsif ($sub eq "!boom" and @data > 0)
+			{
+			    &send("PRIVMSG $CONF{channel} :".join(" ",@data));
+			}
+		#duh
+			elsif ($sub eq "!boombutt" and @data > 0)
+			{
+			    &send("PRIVMSG $CONF{channel} :".join(" ",&buttify(@data)))
 			}
 		##!normfreq changes the frequency the normal people get butted
-			if ($sub eq "!normfreq" and @data >0 )
+			elsif ($sub eq "!normfreq" and @data >0 )
 			{
 				$normalfrequency = $data[0];
 				print("Normal Frequency changed to $normalfrequency");
 			}
-		##!enemfreq changes the frequency the enemies get butted
-			if ($sub eq "!enemfreq" and @data >0 )
+		##!friendfreq changes the frequency the friends get butted
+			elsif ($sub eq "!friendfreq" and @data >0 )
 			{
-				$enemyfrequency = $data[0];
-				print("Enemy Frequency changed to $enemyfrequency");
+				$friendfrequency = $data[0];
+				print("Friend Frequency changed to $friendfrequency");
 			}
-		##!addenemy adds someone to the enemy list. 
-			if ($sub eq "!addenemy" and @data >0 )
+		##!addfriend adds someone to the friend list. 
+			elsif ($sub eq "!addfriend" and @data >0 )
 			{
-				push(@enemies, $data[0]);
-				printf("Enemies:\n");
-				foreach (@enemies)
-				{
-					printf("$_\n");
-				}
-				if (@data >1)
-				{
-					if ($data[1] eq "loud")
-					{
-						&send("PRIVMSG $CONF{channel} : TARGET DESIGNATED: $data[0]");
-					}
-				}
-			}
-		##!remenemy removes someone from the enemy list
-			if ($sub eq "!remenemy" and @data >0 )
-			{
-				removeenemy($data[0]);
-				printf("Enemies:\n");
-				foreach (@enemies)
-				{
-					printf("$_\n");
-				}
-				if (@data >1)
-				{
-					if ($data[1] eq "loud")
-					{
-						&send("PRIVMSG $CONF{channel} : TARGET REMOVED: $data[0]");
-					}
-				}
-			}
-		##!addfriend adds someone to the friend list
-			if ($sub eq "!addfriend" and @data >0 )
-			{
-				push(@friends, $data[0]);
+			    $friends{$data[0]} = 1;
 				printf("Friends:\n");
-				foreach (@friends)
+			        foreach (sort keys %friends)
 				{
 					printf("$_\n");
 				}
@@ -174,16 +198,20 @@ while (1) {
 				{
 					if ($data[1] eq "loud")
 					{
-						&send("PRIVMSG $CONF{channel} : $data[0], you're my bff :)");
+						&send("PRIVMSG $CONF{channel} : $data[0], you're my BFF :)");
+					}
+					else
+					{
+					       &send("PRIVMSG $data[1] : $data[0], you're my BFF :)");
 					}
 				}
 			}
 		##!remfriend removes someone from the friend list
-			if ($sub eq "!remfriend" and @data >0 )
+			elsif ($sub eq "!remfriend" and @data >0 )
 			{
-				removefriend($data[0]);
+				delete $friends{$data[0]};
 				printf("Friends:\n");
-				foreach (@friends)
+				foreach (sort keys %friends)
 				{
 					printf("$_\n");
 				}
@@ -191,17 +219,74 @@ while (1) {
 				{
 					if ($data[1] eq "loud")
 					{
-						&send("PRIVMSG $CONF{channel} : $data[0],  I'm breaking up with you :(");
+						&send("PRIVMSG $CONF{channel} :  $data[0],  I'm breaking up with you :(");
+					}
+					else
+					{
+						&send("PRIVMSG $data[1] :  $data[0],  I'm breaking up with you :(");
+					}
+				}
+			}
+		##!addenemy adds someone to the enemy list
+			elsif ($sub eq "!addenemy" and @data >0 )
+			{
+			    $enemies{$data[0]} = 1;
+				printf("Enemies:\n");
+				foreach (sort keys %enemies)
+				{
+					printf("$_\n");
+				}
+				if (@data >1)
+				{
+					if ($data[1] eq "loud")
+					{
+						&send("PRIVMSG $CONF{channel} : SHUN DESIGNATED: $data[0]");
+					}
+					else
+					{
+					    &send("PRIVMSG $data[1] :  SHUN DESIGNATED: $data[0]");
+					}
+				}
+			}
+		##!remenemy removes someone from the enemy list
+			elsif ($sub eq "!remenemy" and @data >0 )
+			{
+			        delete $enemies{$data[0]};
+				printf("Enemies:\n");
+				foreach (sort keys %enemies)
+				{
+					printf("$_\n");
+				}
+				if (@data >1)
+				{
+					if ($data[1] eq "loud")
+					{
+						&send("PRIVMSG $CONF{channel} : SHUN REMOVED: $data[0]");
+					}
+					else
+					{
+					    	&send("PRIVMSG $data[1] : SHUN REMOVED: $data[0]");
 					}
 				}
 			}
 		##!buttnow will buttify the previous message said in the channel.
-			if ($sub eq "!buttnow" and @previousdata > 0)
+			elsif ($sub eq "!buttnow" and @previousdata > 0)
 			{
 				if (($previousdata[0] !~ /^!/) && ($previousdata[0] !~ /^cout/)) 
 				{
-			  		&send("PRIVMSG $CONF{channel} :".join(" ",&buttify(@previousdata)));
+			  		&send("PRIVMSG $previouschannel :".join(" ",&buttify(@previousdata)));
 				}
+			}
+			elsif ($sub eq "!join" and @data > 0)
+			{
+			    $CONF{channel} = $CONF{channel}.",";
+			    $CONF{channel} = $CONF{channel}.$data[0];
+			    &send("JOIN $data[0]");
+			}
+			elsif ($sub eq "!leave" and @data > 0)
+			{
+			    $CONF{channel} =~ s/$data[0]//;
+			    &send("PART $data[0]");
 			}
 		
 			
@@ -209,27 +294,32 @@ while (1) {
 	}
 	#if messages come from channel, start buttifying
       elsif ($to =~ /^#/ )  {
-		
+	  
+	  my $sender = $from;
+	  $sender =~ s/^:(.*)!.*$/$1/;
+	  if (exists $linestotal{$to})
+	  {
+	  $linestotal{$to}++;
+	  }
+	  else
+	  {
+	      $linestotal{$to} = 1;
+	  }
 		##ignores statements from cout and users containing the word "bot"
               if (($from !~/^:cout/) && ($from !~/^:[^!]*bot[^!]*!/i)) {
 	      if ($sub !~ /^!/) {
 			my $rnd = 1;
+			unshift (@data,$sub);
 			if (@data > 1) {
-				#if it's a friend, don't buttify message. If enemy, buttify message more often.
-				if (isfriend($from)) {
-				$rnd = 1;
-				}
-				elsif (isenemy($from)) { 
-				$rnd = int(rand(int($enemyfrequency)));
-				} 
-				else {
-				$rnd = int(rand(int($normalfrequency)));
-				}
+				#if it's a enemy, don't buttify message. If friend, buttify message more often.
+			    $rnd = tobuttornottobutt($sender);
 				
 			}
-			  unshift (@data,$sub);
+			  
 			#if the random number is 0, buttify that data
 			if ($rnd ==0) {
+			  
+			  $timeoflastbutting{$to} = time;
 			  sleep(@data*0.2 + 1);
 			  &send("PRIVMSG $to :".join(" ",&buttify(@data)));
 			}
@@ -237,6 +327,7 @@ while (1) {
 			else
 			{
 				@previousdata = @data;
+				$previouschannel = $to;
 			}
 	      } elsif ($sub eq "!butt" and @data >0 ) {
 	          if (($data[0] !~ /^!/) && ($data[0] !~ /^cout/)) {
@@ -249,6 +340,23 @@ while (1) {
  }
 }
 
+
+#for future determining of butting
+sub tobuttornottobutt
+{
+    my($rnd, $sender);
+    $sender = shift;
+    if (exists $enemies{$sender}) {
+				$rnd = 1;
+				}
+				elsif (exists $friends{$sender}) { 
+				$rnd = int(rand(int($friendfrequency)));
+				} 
+				else {
+				$rnd = int(rand(int($normalfrequency)));
+				}
+    return $rnd;
+}
 sub connect {
   my ($remote_host,$remote_port,$local_host)=(shift,shift,shift);
   my $socket=IO::Socket::INET->new( PeerAddr => $remote_host,
@@ -289,63 +397,6 @@ my $spoon=fork();
 sub error {
     print "\nerror: @_\n";
     exit;
-}
-
-sub isenemy{
-	my($victim, $enemyname);
-	$victim = $_[0];
-	$victim =~ s/^:(.*)!.*$/$1/;
-	foreach $enemyname (@enemies)
-	{
-		if ( $victim eq $enemyname)
-		{
-			return 1;
-		}
-	}
-	return 0;
-}
-
-sub isfriend{
-	
-	my($victim, $friendname);
-	$victim = $_[0];
-	$victim =~ s/^:(.*)!.*$/$1/;
-	foreach $friendname (@friends)
-	{
-		if ( $victim eq $friendname)
-		{
-			return 1;
-		}
-	}
-	return 0;
-}
-sub removeenemy{
-	my($victim, $blargh, $enemyname);
-	$victim = $_[0];
-	$blargh = 0;
-	foreach $enemyname (@enemies)
-	{
-		if ( $victim eq $enemyname)
-		{
-			$enemies[$blargh] = "";
-		}
-		$blargh++;
-	}
-	
-}
-
-sub removefriend{
-	my($victim, $blargh, $friendname);
-	$victim = $_[0];
-	$blargh = 0;
-	foreach $friendname (@friends)
-	{
-		if ( $victim eq $friendname)
-		{
-			$friends[$blargh] = "";
-		}
-		$blargh++;
-	}
 }
 
 sub readconf {
