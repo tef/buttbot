@@ -43,8 +43,8 @@ my (%timeoflastbutting);
 my ($fullstring);
 my $graceperiod = 240;
 #pre-setting frequencies
-$friendfrequency = 23;
-$normalfrequency = 37;
+$friendfrequency = 37;
+$normalfrequency = 51;
 
 #remove whitespace!
 $CONF{channel} =~ s/\s+//;
@@ -99,6 +99,7 @@ while (1) {
  
   #If buttbot has successfully connected to the server, join a channel.
    if ($command eq "001") {
+      &send("MODE $CONF{nick} -x");
      if (defined $CONF{channel})
 	{
 		&send("JOIN $CONF{channel}") ;
