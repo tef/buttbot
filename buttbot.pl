@@ -99,12 +99,17 @@ while (1) {
  
   #If buttbot has successfully connected to the server, join a channel.
    if ($command eq "001") {
-      &send("MODE $CONF{nick} -x");
+      &send("MODE $CONF{nick} -x"); # hiding hostnames is for wimps.
      if (defined $CONF{channel})
 	{
 		&send("JOIN $CONF{channel}") ;
 		$starttime = time;
 		#&send("PRIVMSG $CONF{channel} : BUTTING SYSTEMS ONLINE!");
+	}
+
+     if (defined $CONF{nickpass})
+	{
+		&send("NICKSERV :identify $CONF{nickpass}");
 	}
    } 
 	#otherwise, if it's a message
