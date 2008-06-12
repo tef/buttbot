@@ -13,27 +13,38 @@ our @EXPORT_OK = qw(buttify);
 
 our $hyp;
 if ( -e "hyphen.tex") {
-$hyp = new TeX::Hyphen file=>"hyphen.tex";
+    $hyp = new TeX::Hyphen file=>"hyphen.tex";
 } else {
-$hyp = new TeX::Hyphen ;
+    $hyp = new TeX::Hyphen ;
 }
+our @stopwords;
+if ( -f "stopwords" && -r "stopwords") {
+    my $fh;
+    open $fh, "stopwords";
+    @stopwords = <$fh>;
+    chomp @stopwords;
+    close $fh;
+} else {
+    @stopwords = qw/a an and or but it in its It's it's the of you I i/;
+}
+
 sub buttify {
    my (@words) = (@_);
    my $rep = int(@words/11)+1;
-   my $c =0;
+   my $c = 0;
 
    # sort indicies by word length
-   my @longest=  map { $_->[0] }
-                sort { $b->[1] <=> $a->[1] }
-                map { [$c++ , length($_) ] } @words;
+   my @longest = map { $_->[0] }
+   sort { $b->[1] <=> $a->[1] }
+   map { [$c++ , length($_) ] } @words;
    $c=0;
 
    # remove stop words
-   @longest = grep {$words[$_] !~/^(a|an|and|or|but|it|in|its|It's|it's|the|of|you|I|i|[\d\W+]+)$/} @longest;
+   @longest = grep {my $word = $words[$_]; $word !~ /^[\d\W+]+$/ && !grep(/$word/i, @stopwords)} @longest;
    # print "Words in order: ".join(",",map {$words[$_]} @longest)."\n";
 
    # create weighed index array of words by length
-   my @index= map {$longest[$_]} weighed_index_array(scalar @longest);
+   my @index = map {$longest[$_]} weighed_index_array(scalar @longest);
    #print "Weighed words in order: ".join(",",map {$words[$_]} @index)."\n";
 
    shuffle(\@index) if (scalar @index);
