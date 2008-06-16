@@ -40,7 +40,10 @@ sub buttify {
    $c=0;
 
    # remove stop words
-   @longest = grep {my $word = $words[$_]; $word !~ /^[\d\W+]+$/ && !grep(/$word/i, @stopwords)} @longest;
+   @longest = grep {
+   my $word = $words[$_]; 
+   my $wordmeta = quotemeta($word);
+   $word !~ /^[\d\W+]+$/ && !grep(/$wordmeta/i, @stopwords)} @longest;
    # print "Words in order: ".join(",",map {$words[$_]} @longest)."\n";
 
    # create weighed index array of words by length
