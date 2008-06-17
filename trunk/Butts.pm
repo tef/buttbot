@@ -46,7 +46,7 @@ sub buttify {
    # print "Words in order: ".join(",",map {$words[$_]} @longest)."\n";
 
    # create weighed index array of words by length
-   my @index = map {$longest[$_]} _weighed_index_array(scalar @longest);
+	my @index = map {$longest[$_]} _weighted_indices(scalar @longest);
    #print "Weighed words in order: ".join(",",map {$words[$_]} @index)."\n";
 
    _shuffle(\@index) if (scalar @index);
@@ -106,18 +106,17 @@ sub _shuffle {
     }
 }
 
-sub _weighed_index_array {
-	my $len = shift;
-        my $c = 0;
-        my $n = $len;
-        my @a = ();
-        while ($c < $len) {
-           push @a, ($c) x ($n*$n);
-           $n--;
-           $c++;
-        }
-	return @a;
+sub _weighted_indices {
+	my $length = shift;
+	my $weight = $length;
+
+	my @stack;
+	for my $index (0 .. $length - 1) {
+		 push @stack, ($index) x ($weight ** 2);
+		 $weight--;
+	}
+
+	return @stack;
 }
 
 1;
-__END__
