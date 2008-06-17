@@ -7,7 +7,10 @@ use Exporter;
 use List::Util qw(max);
 use TeX::Hyphen;
 
-use constant STOPWORDS_FILE => 'stopwords';
+use constant {
+	DEBUG          => 0,
+	STOPWORDS_FILE => 'stopwords',
+};
 
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(buttify);
@@ -46,11 +49,13 @@ sub buttify {
    my $word = $words[$_]; 
    my $wordmeta = quotemeta($word);
    $word !~ /^[\d\W+]+$/ && !grep(/$wordmeta/i, @stopwords)} @longest;
-   # print "Words in order: ".join(",",map {$words[$_]} @longest)."\n";
+
+	print 'Words in order: ' . join(', ', map { $words[$_] } @longest) . "\n" if DEBUG;
 
    # create weighed index array of words by length
 	my @indices = map {$longest[$_]} _weighted_indices(scalar @longest);
-	#print "Weighed words in order: ".join(",",map {$words[$_]} @indices)."\n";
+
+	print 'Weighted words in order: ' . join(', ', map { $words[$_] } @indices) . "\n" if DEBUG;
 
 	_shuffle(\@indices) if @indices;
 
