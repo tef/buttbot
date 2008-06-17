@@ -6,7 +6,7 @@ use Butts qw(buttify);
 use IO::Socket;
 
 ## globals
-use vars qw/$sock %CONF %results $hyp/;
+use vars qw/%CONF %results $hyp/;
 $|=1;
 
 $CONF{file} = shift;
@@ -17,8 +17,13 @@ if (not $CONF{file}) {
 
 &readconf();
 
-$sock=&connect($CONF{server},$CONF{port});
-&error("socket: $! $@") if ($sock eq "");
+my $socket = new IO::Socket::INET(
+	PeerAddr => $CONF{server},
+	PeerPort => $CONF{port},
+	proto    => 'tcp',
+	Type     => SOCK_STREAM,
+	Timeout  => 10
+) or error("socket: $! $@");
 
 &send("NICK $CONF{nick}");
 &send("USER $CONF{ident} 0 * :$CONF{gecos}");
@@ -363,27 +368,17 @@ sub tobuttornottobutt
 				}
     return $rnd;
 }
-sub connect {
-  my ($remote_host,$remote_port,$local_host)=(shift,shift,shift);
-  my $socket=IO::Socket::INET->new( PeerAddr => $remote_host,
-                                 PeerPort => $remote_port,
-                                 proto    => "tcp",
-                                 Type     => SOCK_STREAM,
-                                 Timeout  => 10
-                                 );
-  return $socket;
-}
 
 sub gets {
   my $data = "";
-  $sock->recv($data,1024) ;
+  $socket->recv($data, 1024);
 #or &error("get: $! $@");
   return $data;
 }
 sub send {
   my ($text) = join(" ",@_);
   $text.="\n";
-  $sock->send($text);
+  $socket->send($text);
 }
 
 sub forks {
