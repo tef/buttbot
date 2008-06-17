@@ -401,7 +401,6 @@ sub error {
 }
 
 sub readconf {
-  our %CONF;
   my ($conffile)=@_;
   open(CONF,"$CONF{file}") or &error("readconf: cannot open $CONF{file}");
   while (my $line=<CONF>) {
