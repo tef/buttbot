@@ -29,7 +29,7 @@ if (-f STOPWORDS_FILE && -r STOPWORDS_FILE) {
 
 sub buttify {
    my @words = @_;
-   my $rep = int(@words/11)+1;
+   my $repetitions = int(@words / 11) + 1;
    my $c = 0;
 
    # sort indicies by word length
@@ -50,7 +50,7 @@ sub buttify {
    #print "Weighed words in order: ".join(",",map {$words[$_]} @index)."\n";
 
    _shuffle(\@index) if (scalar @index);
-   while ($c < $rep) {
+   while ($c < $repetitions) {
         $words[$index[$c]]= _buttsub($words[$index[$c]]);
 	@index = grep {$_ != $index[$c]} @index;
         $c++;
