@@ -32,11 +32,14 @@ sub buttify {
    my $repetitions = int(@words / 11) + 1;
    my $c = 0;
 
-   # sort indicies by word length
-   my @longest = map { $_->[0] }
-   sort { $b->[1] <=> $a->[1] }
-   map { [$c++ , length($_) ] } @words;
-   $c=0;
+	# sort indicies by word length
+	my @longest = do {
+		my $c;
+
+		map  { $_->[0] }
+		sort { $b->[1] <=> $a->[1] }
+		map  { [$c++ , length($_) ] } @words;
+	};
 
    # remove stop words
    @longest = grep {
@@ -46,15 +49,17 @@ sub buttify {
    # print "Words in order: ".join(",",map {$words[$_]} @longest)."\n";
 
    # create weighed index array of words by length
-	my @index = map {$longest[$_]} _weighted_indices(scalar @longest);
-   #print "Weighed words in order: ".join(",",map {$words[$_]} @index)."\n";
+	my @indices = map {$longest[$_]} _weighted_indices(scalar @longest);
+	#print "Weighed words in order: ".join(",",map {$words[$_]} @indices)."\n";
 
-   _shuffle(\@index) if (scalar @index);
-   while ($c < $repetitions) {
-        $words[$index[$c]]= _buttsub($words[$index[$c]]);
-	@index = grep {$_ != $index[$c]} @index;
-        $c++;
-  }
+	_shuffle(\@indices) if @indices;
+
+	for my $c (0 .. $repetitions - 1) {
+		my $index = $indices[$c];
+
+		$words[$index] = _buttsub($words[$index]);
+		@indices = grep { $_ != $index } @indices;
+	}
 
   return @words;
 }
