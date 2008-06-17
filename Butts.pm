@@ -46,12 +46,12 @@ sub buttify {
    # print "Words in order: ".join(",",map {$words[$_]} @longest)."\n";
 
    # create weighed index array of words by length
-   my @index = map {$longest[$_]} weighed_index_array(scalar @longest);
+   my @index = map {$longest[$_]} _weighed_index_array(scalar @longest);
    #print "Weighed words in order: ".join(",",map {$words[$_]} @index)."\n";
 
-   shuffle(\@index) if (scalar @index);
+   _shuffle(\@index) if (scalar @index);
    while ($c < $rep) {
-        $words[$index[$c]]=&buttsub($words[$index[$c]]);
+        $words[$index[$c]]= _buttsub($words[$index[$c]]);
 	@index = grep {$_ != $index[$c]} @index;
         $c++;
   }
@@ -59,55 +59,7 @@ sub buttify {
   return @words;
 }
 
-sub buttifynew {
-
-   my (@words) = (@_);
-   my $rep = int(@words/11)+1;
-   my $c =0;
-
-   # create list of weights and sort them.
-
-   my $factor = max(map {length($_)} @words);
-
-   # print "Factor : $factor \n"; 
-   # sort indicies by word length
-   
-   my @pairs = map { [$c++,length($_)] } @words;
-  
-   #print "Pairs: ".join(",",map{$_->[0]." ".$_->[1]}@pairs)."\n";
-
-   @pairs = grep {$words[$_->[0]] !~/^(a|an|and|or|but|it|in|the|of|you|I|i)$/} @pairs;
-
-   #print "Stripped Pairs: ".join(",",map{$_->[0]." ".$_->[1]}@pairs)."\n";
-  
-   #@pairs = map { [$_->[0], rand($factor**$_->[1])**(1.0/$_->[1])]} @pairs;  
-   # possible new algorithm but didn't have a nice as distribution. 
-   # I should draw graphs.
-   @pairs = map { [$_->[0], rand($_->[1]**$factor)**(1.0/$factor)]} @pairs;  
-   #@pairs = map { [$_->[0], log(rand(exp($_->[1]))+1)]} @pairs;  
-
-   #print "Weighed Pairs: ".join(",",map{$_->[0]." ".$_->[1]}@pairs)."\n";
-
-   @pairs = sort { $b->[1] <=> $a->[1]} @pairs;  
-   
-   #print "Sorted Pairs: ".join(",",map{$_->[0]." ".$_->[1]}@pairs)."\n";
-   
-   my @index = map { $_->[0]} @pairs;
-   
-   $c=0;
-   
-   # remove stop words
-
-   while ($c < $rep) {
-        $words[$index[$c]]=&buttsub($words[$index[$c]]);
-        $c++;
-  }
-
-  return @words;
-}
-
-
-sub buttsub {
+sub _buttsub {
    my $word = shift;
 
    # split off leading and trailing punctuation
@@ -145,7 +97,7 @@ sub buttsub {
 ## perl cookbook
 # fisher_yates_shuffle( \@array ) : generate a random permutation
 # of @array in place
-sub shuffle {
+sub _shuffle {
     my $array = shift;
     my $i;
     for ($i = @$array; --$i; ) {
@@ -155,7 +107,7 @@ sub shuffle {
     }
 }
 
-sub weighed_index_array {
+sub _weighed_index_array {
 	my $len = shift;
         my $c = 0;
         my $n = $len;
