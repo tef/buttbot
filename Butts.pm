@@ -7,6 +7,8 @@ use Exporter;
 use List::Util qw(max);
 use TeX::Hyphen;
 
+use constant STOPWORDS_FILE => 'stopwords';
+
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(buttify);
 
@@ -18,12 +20,9 @@ if (-e "hyphen.tex") {
 }
 
 our @stopwords;
-if (-f "stopwords" && -r "stopwords") {
-    my $fh;
-    open $fh, "stopwords";
-    @stopwords = <$fh>;
-    chomp @stopwords;
-    close $fh;
+if (-f STOPWORDS_FILE && -r STOPWORDS_FILE) {
+    open my($fh), STOPWORDS_FILE;
+    chomp(@stopwords = <$fh>);
 } else {
     @stopwords = qw/a an and or but it in its It's it's the of you I i/;
 }
