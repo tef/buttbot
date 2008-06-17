@@ -96,14 +96,14 @@ sub _buttsub {
 
 # fisher yates shuffle
 sub _shuffle {
-    my $array = shift;
+	my $array = shift;
 
 	for (my $i = $#$array; $i > 0; --$i) {
-        my $j = int rand($i + 1);
+		my $j = int rand($i + 1);
 
-        next if $i == $j;
-        @$array[$i, $j] = @$array[$j, $i];
-    }
+		next if $i == $j;
+		@$array[$i, $j] = @$array[$j, $i];
+	}
 }
 
 sub _weighted_indices {
@@ -112,8 +112,8 @@ sub _weighted_indices {
 
 	my @stack;
 	for my $index (0 .. $length - 1) {
-		 push @stack, ($index) x ($weight ** 2);
-		 $weight--;
+		push @stack, ($index) x ($weight ** 2);
+		$weight--;
 	}
 
 	return @stack;
