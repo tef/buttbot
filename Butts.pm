@@ -8,17 +8,17 @@ use List::Util qw(max);
 use TeX::Hyphen;
 
 our @ISA = qw(Exporter);
-
 our @EXPORT_OK = qw(buttify);
 
 our $hyp;
-if ( -e "hyphen.tex") {
-    $hyp = new TeX::Hyphen file=>"hyphen.tex";
+if (-e "hyphen.tex") {
+    $hyp = new TeX::Hyphen file => "hyphen.tex";
 } else {
-    $hyp = new TeX::Hyphen ;
+    $hyp = new TeX::Hyphen;
 }
+
 our @stopwords;
-if ( -f "stopwords" && -r "stopwords") {
+if (-f "stopwords" && -r "stopwords") {
     my $fh;
     open $fh, "stopwords";
     @stopwords = <$fh>;
