@@ -10,6 +10,6 @@ my @sample = buttify(qw(The rain in Spain falls mainly on the plain.));
 	print "@sample\n";
 }
 
-my $has_butt = grep { /butt/i } buttify(@sample);
+my $has_butt = grep { /butt/i } @sample;
 
 ok($has_butt);
