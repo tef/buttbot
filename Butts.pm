@@ -94,16 +94,15 @@ sub _buttsub {
    return join('', $lp, $actual_word, $rp);
 }
 
-## perl cookbook
-# fisher_yates_shuffle( \@array ) : generate a random permutation
-# of @array in place
+# fisher yates shuffle
 sub _shuffle {
     my $array = shift;
-    my $i;
-    for ($i = @$array; --$i; ) {
-        my $j = int rand ($i+1);
+
+	for (my $i = $#$array; $i > 0; --$i) {
+        my $j = int rand($i + 1);
+
         next if $i == $j;
-        @$array[$i,$j] = @$array[$j,$i];
+        @$array[$i, $j] = @$array[$j, $i];
     }
 }
 
