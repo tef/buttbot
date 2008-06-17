@@ -44,16 +44,20 @@ sub buttify {
 		map  { [$c++ , length($_) ] } @words;
 	};
 
-   # remove stop words
-   @longest = grep {
-   my $word = $words[$_]; 
-   my $wordmeta = quotemeta($word);
-   $word !~ /^[\d\W+]+$/ && !grep(/$wordmeta/i, @stopwords)} @longest;
+	# remove stop words
+	@longest = grep {
+		my $word = $words[$_]; 
+
+		my $is_word = $word !~ /^[\d\W+]+$/;
+		my $is_stop = grep /\Q$word\E/i, @stopwords;
+
+		$is_word and not $is_stop;
+	} @longest;
 
 	print 'Words in order: ' . join(', ', map { $words[$_] } @longest) . "\n" if DEBUG;
 
-   # create weighed index array of words by length
-	my @indices = map {$longest[$_]} _weighted_indices(scalar @longest);
+	# create weighted index array of words by length
+	my @indices = map { $longest[$_] } _weighted_indices(scalar @longest);
 
 	print 'Weighted words in order: ' . join(', ', map { $words[$_] } @indices) . "\n" if DEBUG;
 
