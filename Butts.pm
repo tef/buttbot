@@ -28,7 +28,7 @@ if (-f STOPWORDS_FILE && -r STOPWORDS_FILE) {
 }
 
 sub buttify {
-   my (@words) = (@_);
+   my @words = @_;
    my $rep = int(@words/11)+1;
    my $c = 0;
 
@@ -108,7 +108,7 @@ sub buttifynew {
 
 
 sub buttsub {
-   my $word = shift @_;
+   my $word = shift;
 
    # split off leading and trailing punctuation
    my ($lp, $actual_word, $rp) =
