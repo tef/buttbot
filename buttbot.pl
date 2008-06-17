@@ -5,9 +5,9 @@ use warnings;
 use Butts qw(buttify);
 use IO::Socket;
 
-## globals
-use vars qw/%CONF %results $hyp/;
-$|=1;
+$|++;
+
+my %CONF;
 
 $CONF{file} = shift;
 if (not $CONF{file}) {
