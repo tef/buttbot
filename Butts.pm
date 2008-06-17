@@ -14,23 +14,23 @@ our @EXPORT_OK = qw(buttify);
 
 our $hyp;
 if (-e "hyphen.tex") {
-    $hyp = new TeX::Hyphen file => "hyphen.tex";
+	$hyp = new TeX::Hyphen file => "hyphen.tex";
 } else {
-    $hyp = new TeX::Hyphen;
+	$hyp = new TeX::Hyphen;
 }
 
 our @stopwords;
 if (-f STOPWORDS_FILE && -r STOPWORDS_FILE) {
-    open my($fh), STOPWORDS_FILE;
-    chomp(@stopwords = <$fh>);
+	open my($fh), STOPWORDS_FILE;
+	chomp(@stopwords = <$fh>);
 } else {
-    @stopwords = qw/a an and or but it in its It's it's the of you I i/;
+	@stopwords = qw/a an and or but it in its It's it's the of you I i/;
 }
 
 sub buttify {
-   my @words = @_;
-   my $repetitions = int(@words / 11) + 1;
-   my $c = 0;
+	my @words = @_;
+	my $repetitions = int(@words / 11) + 1;
+	my $c = 0;
 
 	# sort indicies by word length
 	my @longest = do {
