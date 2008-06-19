@@ -8,8 +8,8 @@ use List::Util qw(max shuffle);
 use TeX::Hyphen;
 
 use constant {
-	DEBUG          => 0,
-	STOPWORDS_FILE => 'stopwords',
+	DEBUG     => 0,
+	STOPWORDS => 'stopwords',
 };
 
 our @ISA = qw(Exporter);
@@ -23,8 +23,8 @@ if (-e "hyphen.tex") {
 }
 
 our @stopwords;
-if (-f STOPWORDS_FILE && -r STOPWORDS_FILE) {
-	open my($fh), STOPWORDS_FILE;
+if (-f STOPWORDS && -r STOPWORDS) {
+	open my($fh), STOPWORDS;
 	chomp(@stopwords = <$fh>);
 } else {
 	@stopwords = qw/a an and or but it in its It's it's the of you I i/;
