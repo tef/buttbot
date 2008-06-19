@@ -16,14 +16,9 @@ use constant {
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(buttify);
 
-our $hyp;
-if (-e HYPHEN) {
-	$hyp = new TeX::Hyphen file => HYPHEN;
-} else {
-	$hyp = new TeX::Hyphen;
-}
+my $hyp = new TeX::Hyphen( -e HYPHEN ? (file => HYPHEN) : () );
 
-our @stopwords;
+my @stopwords;
 if (-f STOPWORDS && -r STOPWORDS) {
 	open my($fh), STOPWORDS;
 	chomp(@stopwords = <$fh>);
