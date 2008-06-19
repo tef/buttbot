@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Exporter;
-use List::Util qw(max);
+use List::Util qw(max shuffle);
 use TeX::Hyphen;
 
 use constant {
@@ -61,7 +61,7 @@ sub buttify {
 
 	print 'Weighted words in order: ' . join(', ', map { $words[$_] } @indices) . "\n" if DEBUG;
 
-	_shuffle(\@indices) if @indices;
+	@indices = shuffle(@indices) if @indices;
 
 	for my $c (0 .. $repetitions - 1) {
 		my $index = $indices[$c];
@@ -106,18 +106,6 @@ sub _buttsub {
    
    substr($actual_word,$l,$r) = $butt;
    return join('', $lp, $actual_word, $rp);
-}
-
-# fisher yates shuffle
-sub _shuffle {
-	my $array = shift;
-
-	for (my $i = $#$array; $i > 0; --$i) {
-		my $j = int rand($i + 1);
-
-		next if $i == $j;
-		@$array[$i, $j] = @$array[$j, $i];
-	}
 }
 
 sub _weighted_indices {
