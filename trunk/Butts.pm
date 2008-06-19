@@ -10,14 +10,15 @@ use TeX::Hyphen;
 use constant {
 	DEBUG     => 0,
 	STOPWORDS => 'stopwords',
+	HYPHEN    => 'hyphen.tex',
 };
 
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(buttify);
 
 our $hyp;
-if (-e "hyphen.tex") {
-	$hyp = new TeX::Hyphen file => "hyphen.tex";
+if (-e HYPHEN) {
+	$hyp = new TeX::Hyphen file => HYPHEN;
 } else {
 	$hyp = new TeX::Hyphen;
 }
