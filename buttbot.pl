@@ -401,14 +401,14 @@ sub error {
 }
 
 sub readconf {
-  open(CONF,"$CONF{file}") or &error("readconf: cannot open $CONF{file}");
-  while (my $line=<CONF>) {
+  open my($fh), "$CONF{file}" or &error("readconf: cannot open $CONF{file}");
+
+  while (my $line = <$fh>) {
     if (substr($line,0,1) ne "#") {
      if ($line =~/^\s*([^\s]+)\s*=\s*(.+)$/) {
         $CONF{lc($1)}=$2;
       }
      }
   }   
-  close(CONF);
 }
 
