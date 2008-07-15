@@ -387,6 +387,7 @@ sub gets {
 #or &error("get: $! $@");
   return $data;
 }
+
 sub send {
   my ($text) = join(" ",@_);
   $text.="\n";
