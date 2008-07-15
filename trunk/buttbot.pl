@@ -332,7 +332,19 @@ while (1) {
 			  
 			  $timeoflastbutting{$to} = time;
 			  sleep(@data*0.2 + 1);
-			  &send("PRIVMSG $to :".join(" ",&buttify(@data)));
+			  # if the message is a CTCP line, avoid replacing
+			  # the CTCP command in the first word
+			  if (substr($data[0], 0, 1) eq "\1") {
+			    # only butt if the command is not the only word
+			    if (@data > 1 && $data[1] ne "\1") {
+			      my $first = shift(@data);
+			      my @butted = &buttify(@data);
+			      unshift(@butted, $first);
+			      &send("PRIVMSG $to :".join(" ", @butted));
+			    }
+			  } else {
+			    &send("PRIVMSG $to :".join(" ", &buttify(@data)));
+			  }
 			}
 			#store this for later butting
 			else
