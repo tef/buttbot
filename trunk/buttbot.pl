@@ -394,17 +394,18 @@ sub _send {
 }
 
 sub forks {
-my $spoon=fork();
-  if (defined $spoon) {
-    if ($spoon==0) {
-    return;
-    } else {
-    print "exiting, child pid=$spoon\n";
-    exit;
-    }
-  } else {
-    die "fork: $! $@";
-  }
+	my $pid = fork;
+
+	if (defined $pid) {
+		if ($pid == 0) { # is child process
+			return;
+		} else {
+			print "exiting, child pid = $pid\n";
+			exit;
+		}
+	} else {
+		die "fork: $! $@";
+	}
 }
 
 sub readconf {
