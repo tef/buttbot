@@ -23,7 +23,7 @@ my $socket = new IO::Socket::INET(
 	proto    => 'tcp',
 	Type     => SOCK_STREAM,
 	Timeout  => 10
-) or die "socket: $! $@";
+) or die "socket: $!";
 
 _send("NICK $CONF{nick}");
 _send("USER $CONF{ident} 0 * :$CONF{gecos}");
@@ -71,7 +71,7 @@ $CONF{channel} =~ s/\s+//;
 #main execution loop
 while (1) {
   #check for errors.
-  die "main: $! $@" if (($! ne "" ) || ($@ ne ""));
+  die "main: $!" if $!;
   #Otherwise move through the buffer.
   @buffer=split(/\n/,&gets());
   
@@ -397,7 +397,7 @@ sub _fork {
 			exit;
 		}
 	} else {
-		die "fork: $! $@";
+		die "fork: $!";
 	}
 }
 
