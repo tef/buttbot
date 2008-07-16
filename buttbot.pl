@@ -46,7 +46,7 @@ my ($starttime);
 my (%linestotal);
 my (%timeoflastbutting);
 my ($fullstring);
-my $graceperiod = 240;
+
 #pre-setting frequencies
 $friendfrequency = 37;
 $normalfrequency = 51;
