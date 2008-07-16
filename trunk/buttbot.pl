@@ -25,8 +25,8 @@ my $socket = new IO::Socket::INET(
 	Timeout  => 10
 ) or die "socket: $! $@";
 
-&send("NICK $CONF{nick}");
-&send("USER $CONF{ident} 0 * :$CONF{gecos}");
+_send("NICK $CONF{nick}");
+_send("USER $CONF{ident} 0 * :$CONF{gecos}");
 
 &forks() if (not $CONF{debug});;
 
@@ -94,9 +94,9 @@ while (1) {
    #if server pings, ping back.
    if ($from eq "PING") {
 	   if ($command=~/^:\d+$/) {
-	   		&send("PONG $command");
+	   		_send("PONG $command");
 	   } else {
-	  	 &send("PONG :$CONF{nick}");
+	  	 _send("PONG :$CONF{nick}");
 	   }	   
    }
    
@@ -104,17 +104,17 @@ while (1) {
  
   #If buttbot has successfully connected to the server, join a channel.
    if ($command eq "001") {
-      &send("MODE $CONF{nick} -x"); # hiding hostnames is for wimps.
+      _send("MODE $CONF{nick} -x"); # hiding hostnames is for wimps.
      if (defined $CONF{channel})
 	{
-		&send("JOIN $CONF{channel}") ;
+		_send("JOIN $CONF{channel}") ;
 		$starttime = time;
-		#&send("PRIVMSG $CONF{channel} : BUTTING SYSTEMS ONLINE!");
+		#_send("PRIVMSG $CONF{channel} : BUTTING SYSTEMS ONLINE!");
 	}
 
      if (defined $CONF{nickpass})
 	{
-		&send("NICKSERV :identify $CONF{nickpass}");
+		_send("NICKSERV :identify $CONF{nickpass}");
 	}
    } 
 	#otherwise, if it's a message
@@ -136,14 +136,14 @@ while (1) {
 		{
 	     		 if (($data[0] !~ /^!/) && ($data[0] !~ /^cout/)) 
 			{
-				  &send("PRIVMSG $to :".join(" ",&buttify(@data)));
+				  _send("PRIVMSG $to :".join(" ",&buttify(@data)));
 			}
 		}
 		
 			#!help helps a brotha out, yo
 			if ($sub eq "!help")
 			{
-			    &send("PRIVMSG $to : Buttbot is a butting robot of the future. Use !butt <message> to buttify a message.");
+			    _send("PRIVMSG $to : Buttbot is a butting robot of the future. Use !butt <message> to buttify a message.");
 			}
 
 		##if the first word in the string is equal to the password, set the user to be the admin
@@ -158,31 +158,31 @@ while (1) {
 		## e.g. "!quote PRIVMSG #testing : HELLO" prints out "HELLO" to #testing
 			if ($sub eq "!quote" and @data >0 )
 			{
-				&send(@data) ;
+				_send(@data) ;
 			}
 		##!echo #channel spits out whatever to the channel
 			elsif ($sub eq "!echo" and @data >1 )
 			{
 			    $_ = shift(@data);
 			    
-				&send("PRIVMSG $_ :".join(" ",@data));
+				_send("PRIVMSG $_ :".join(" ",@data));
 			}
 		##!echobutt #channel spits out whatever to the channel, but will buttify it
 			elsif ($sub eq "!echobutt" and @data >1 )
 			{
 			    $_ = shift(@data);
 			   
-				&send("PRIVMSG $_ :".join(" ",&buttify(@data)));
+				_send("PRIVMSG $_ :".join(" ",&buttify(@data)));
 			}
 		#!boom spits out whatever to every channel
 			elsif ($sub eq "!boom" and @data > 0)
 			{
-			    &send("PRIVMSG $CONF{channel} :".join(" ",@data));
+			    _send("PRIVMSG $CONF{channel} :".join(" ",@data));
 			}
 		#duh
 			elsif ($sub eq "!boombutt" and @data > 0)
 			{
-			    &send("PRIVMSG $CONF{channel} :".join(" ",&buttify(@data)))
+			    _send("PRIVMSG $CONF{channel} :".join(" ",&buttify(@data)))
 			}
 		##!normfreq changes the frequency the normal people get butted
 			elsif ($sub eq "!normfreq" and @data >0 )
@@ -209,11 +209,11 @@ while (1) {
 				{
 					if ($data[1] eq "loud")
 					{
-						&send("PRIVMSG $CONF{channel} : $data[0], you're my BFF :)");
+						_send("PRIVMSG $CONF{channel} : $data[0], you're my BFF :)");
 					}
 					else
 					{
-					       &send("PRIVMSG $data[1] : $data[0], you're my BFF :)");
+					       _send("PRIVMSG $data[1] : $data[0], you're my BFF :)");
 					}
 				}
 			}
@@ -230,11 +230,11 @@ while (1) {
 				{
 					if ($data[1] eq "loud")
 					{
-						&send("PRIVMSG $CONF{channel} :  $data[0],  I'm breaking up with you :(");
+						_send("PRIVMSG $CONF{channel} :  $data[0],  I'm breaking up with you :(");
 					}
 					else
 					{
-						&send("PRIVMSG $data[1] :  $data[0],  I'm breaking up with you :(");
+						_send("PRIVMSG $data[1] :  $data[0],  I'm breaking up with you :(");
 					}
 				}
 			}
@@ -251,11 +251,11 @@ while (1) {
 				{
 					if ($data[1] eq "loud")
 					{
-						&send("PRIVMSG $CONF{channel} : SHUN DESIGNATED: $data[0]");
+						_send("PRIVMSG $CONF{channel} : SHUN DESIGNATED: $data[0]");
 					}
 					else
 					{
-					    &send("PRIVMSG $data[1] :  SHUN DESIGNATED: $data[0]");
+					    _send("PRIVMSG $data[1] :  SHUN DESIGNATED: $data[0]");
 					}
 				}
 			}
@@ -272,11 +272,11 @@ while (1) {
 				{
 					if ($data[1] eq "loud")
 					{
-						&send("PRIVMSG $CONF{channel} : SHUN REMOVED: $data[0]");
+						_send("PRIVMSG $CONF{channel} : SHUN REMOVED: $data[0]");
 					}
 					else
 					{
-					    	&send("PRIVMSG $data[1] : SHUN REMOVED: $data[0]");
+					    	_send("PRIVMSG $data[1] : SHUN REMOVED: $data[0]");
 					}
 				}
 			}
@@ -285,19 +285,19 @@ while (1) {
 			{
 				if (($previousdata[0] !~ /^!/) && ($previousdata[0] !~ /^cout/)) 
 				{
-			  		&send("PRIVMSG $previouschannel :".join(" ",&buttify(@previousdata)));
+			  		_send("PRIVMSG $previouschannel :".join(" ",&buttify(@previousdata)));
 				}
 			}
 			elsif ($sub eq "!join" and @data > 0)
 			{
 			    $CONF{channel} = $CONF{channel}.",";
 			    $CONF{channel} = $CONF{channel}.$data[0];
-			    &send("JOIN $data[0]");
+			    _send("JOIN $data[0]");
 			}
 			elsif ($sub eq "!leave" and @data > 0)
 			{
 			    $CONF{channel} =~ s/$data[0]//;
-			    &send("PART $data[0]");
+			    _send("PART $data[0]");
 			}
 		
 			
@@ -340,10 +340,10 @@ while (1) {
 			      my $first = shift(@data);
 			      my @butted = &buttify(@data);
 			      unshift(@butted, $first);
-			      &send("PRIVMSG $to :".join(" ", @butted));
+			      _send("PRIVMSG $to :".join(" ", @butted));
 			    }
 			  } else {
-			    &send("PRIVMSG $to :".join(" ", &buttify(@data)));
+			    _send("PRIVMSG $to :".join(" ", &buttify(@data)));
 			  }
 			}
 			#store this for later butting
@@ -354,7 +354,7 @@ while (1) {
 			}
 	      } elsif ($sub eq "!butt" and @data >0 ) {
 	          if (($data[0] !~ /^!/) && ($data[0] !~ /^cout/)) {
-		  &send("PRIVMSG $to :".join(" ",&buttify(@data)));
+		  _send("PRIVMSG $to :".join(" ",&buttify(@data)));
 	      }
 	      }
 	 }
@@ -389,7 +389,7 @@ sub gets {
   return $data;
 }
 
-sub send {
+sub _send {
   $socket->send("@_\n");
 }
 
