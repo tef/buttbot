@@ -389,9 +389,7 @@ sub gets {
 }
 
 sub send {
-  my ($text) = join(" ",@_);
-  $text.="\n";
-  $socket->send($text);
+  $socket->send("@_\n");
 }
 
 sub forks {
