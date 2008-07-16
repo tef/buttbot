@@ -69,13 +69,14 @@ $CONF{channel} =~ s/\s+//;
 #== forever butting... ========================================================
 
 while (1) {
-  die "main: $!" if $!;
+	die "main: $!" if $!;
 
-  my @buffer = split /\n/, &gets();
-  
-  foreach my $thing (@buffer) {
-      print "$thing\n";
-   ($from,$command,@data)=split(/\s+/,$thing);
+	my @buffer = split /\n/, &gets();
+
+	foreach my $line (@buffer) {
+		print "$line\n";
+
+		($from, $command, @data) = split /\s+/, $line;
 
    $from ||= '';
    $command ||= '';
