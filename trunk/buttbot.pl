@@ -44,7 +44,6 @@ my (@channels);
 my ($starttime);
 my (%linestotal);
 my (%timeoflastbutting);
-my ($fullstring);
 
 #pre-setting frequencies
 $friendfrequency = 37;
@@ -76,9 +75,6 @@ while (1) {
   
   foreach my $thing (@buffer) {
       print "$thing\n";
-      $fullstring = $thing;
-      #putting the message from $thing into a full string to preserve the whitespace, just in case.
-      $fullstring =~ s/(.*?)\s+(.*?)\s+(.*)/$3/;
    ($from,$command,@data)=split(/\s+/,$thing);
 
    $from ||= '';
