@@ -28,7 +28,7 @@ my $socket = new IO::Socket::INET(
 _send("NICK $CONF{nick}");
 _send("USER $CONF{ident} 0 * :$CONF{gecos}");
 
-&forks() if (not $CONF{debug});;
+_fork() unless $CONF{debug};
 
 my ($auth, @buffer) ;
 $auth ="";
@@ -393,7 +393,7 @@ sub _send {
   $socket->send("@_\n");
 }
 
-sub forks {
+sub _fork {
 	my $pid = fork;
 
 	if (defined $pid) {
