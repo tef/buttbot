@@ -54,26 +54,19 @@ $normalfrequency = 51;
 #remove whitespace!
 $CONF{channel} =~ s/\s+//;
 
-#add friends from conf file
-if (exists $CONF{friends})
-{
-    @_ = split(/s*,s*/,$CONF{friends});
-    foreach $_ (@_)
-    {
-	$friends{$_} = 1;
-    }
-}
+# add friends from conf file
+%friends = map {
+	(my $friend = $_) =~ s/^\s+|\s+$//g;
 
-#add enemies from conf file
-if (exists $CONF{enemies})
-{
-    @_ = split(/s*,s*/,$CONF{enemies});
-    foreach $_ (@_)
-    {
-	$enemies{$_} = 1;
-    }
-}
+	$friend, 1;
+} split /,/, $CONF{friends} if $CONF{friends};
 
+# add enemies from conf file
+%enemies = map {
+	(my $enemy = $_) =~ s/^\s+|\s+$//g;
+
+	$enemy, 1;
+} split /,/, $CONF{enemies} if $CONF{enemies};
 
 #main execution loop
 while (1) {
