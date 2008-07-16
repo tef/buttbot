@@ -363,6 +363,7 @@ while (1) {
  }
 }
 
+#== subroutines ===============================================================
 
 #for future determining of butting
 sub tobuttornottobutt
@@ -417,4 +418,3 @@ sub readconf {
      }
   }   
 }
-
