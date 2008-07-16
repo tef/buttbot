@@ -41,7 +41,6 @@ my ($normalfrequency, $friendfrequency);
 my (@previousdata);
 my ($previouschannel);
 my (@channels);
-my ($starttime);
 my (%linestotal);
 my (%timeoflastbutting);
 
@@ -97,7 +96,6 @@ while (1) {
      if (defined $CONF{channel})
 	{
 		_send("JOIN $CONF{channel}") ;
-		$starttime = time;
 		#_send("PRIVMSG $CONF{channel} : BUTTING SYSTEMS ONLINE!");
 	}
 
