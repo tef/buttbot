@@ -30,9 +30,8 @@ _send("USER $CONF{ident} 0 * :$CONF{gecos}");
 
 _fork() unless $CONF{debug};
 
-my ($auth, @buffer) ;
-$auth ="";
-@buffer=();
+my $auth = "";
+
 my ($from,$command,@data);
 #list of friends (people who get buttified more often) and enemies (people who dont get butted.)
 my (%friends, %enemies);
@@ -68,12 +67,12 @@ $CONF{channel} =~ s/\s+//;
 	$enemy, 1;
 } split /,/, $CONF{enemies} if $CONF{enemies};
 
-#main execution loop
+#== forever butting... ========================================================
+
 while (1) {
-  #check for errors.
   die "main: $!" if $!;
-  #Otherwise move through the buffer.
-  @buffer=split(/\n/,&gets());
+
+  my @buffer = split /\n/, &gets();
   
   foreach my $thing (@buffer) {
       print "$thing\n";
