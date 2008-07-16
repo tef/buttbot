@@ -23,7 +23,7 @@ my $socket = new IO::Socket::INET(
 	proto    => 'tcp',
 	Type     => SOCK_STREAM,
 	Timeout  => 10
-) or error("socket: $! $@");
+) or die "socket: $! $@";
 
 &send("NICK $CONF{nick}");
 &send("USER $CONF{ident} 0 * :$CONF{gecos}");
@@ -78,7 +78,7 @@ if (exists $CONF{enemies})
 #main execution loop
 while (1) {
   #check for errors.
-  &error("main: $! $@") if (($! ne "" ) || ($@ ne ""));
+  die "main: $! $@" if (($! ne "" ) || ($@ ne ""));
   #Otherwise move through the buffer.
   @buffer=split(/\n/,&gets());
   
@@ -100,7 +100,7 @@ while (1) {
 	   }	   
    }
    
-   &error("from server: @data") if ($from eq "ERROR");
+   die "from server: @data" if ($from eq "ERROR");
  
   #If buttbot has successfully connected to the server, join a channel.
    if ($command eq "001") {
@@ -384,7 +384,7 @@ sub tobuttornottobutt
 sub gets {
   my $data = "";
   $socket->recv($data, 1024);
-#or &error("get: $! $@");
+
   return $data;
 }
 
@@ -402,17 +402,12 @@ my $spoon=fork();
     exit;
     }
   } else {
-    &error("fork: $! $@");
+    die "fork: $! $@";
   }
 }
 
-sub error {
-    print "\nerror: @_\n";
-    exit;
-}
-
 sub readconf {
-  open my($fh), "$CONF{file}" or &error("readconf: cannot open $CONF{file}");
+  open my($fh), "$CONF{file}" or die "readconf: cannot open $CONF{file}";
 
   while (my $line = <$fh>) {
     if (substr($line,0,1) ne "#") {
