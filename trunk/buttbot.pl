@@ -82,7 +82,7 @@ sub process_line {
 	die "from server: @data" if $from eq 'ERROR';
 
 	# if server pings, ping back.
-	_pong($command =~ /^:\d+$/ ? $command : ":$CONF{nick}") if $from eq 'PING';
+	pong($command =~ /^:\d+$/ ? $command : ":$CONF{nick}") if $from eq 'PING';
 
 	# If buttbot has successfully connected to the server, join a channel.
 	if ($command eq '001') {
@@ -133,7 +133,9 @@ sub cmd_privmsg {
 }
 
 sub pm_bot {
-	my ($to, $sub, @data) = @_;
+	my ($from, $sub, @data) = @_;
+
+	my $to = $from;
 
 		$to =~ s/^:(.*)!.*$/$1/;
 		#If the command is !butt, buttify message.
@@ -310,7 +312,9 @@ sub pm_bot {
 }
 
 sub pm_channel {
-	my ($sender, $to, $sub, @data) = @_;
+	my ($from, $to, $sub, @data) = @_;
+
+	my $sender = $from;
 
 	  $sender =~ s/^:(.*)!.*$/$1/;
 	  if (exists $linestotal{$to})
