@@ -26,7 +26,6 @@ _fork() unless $CONF{debug};
 
 my $auth = "";
 
-my ($from,$command,@data);
 #list of friends (people who get buttified more often) and enemies (people who dont get butted.)
 my (%friends, %enemies);
 #frequency that normal people and friends get butted
@@ -75,7 +74,7 @@ sub process_line {
 	my $line = shift;
 	print "$line\n";
 
-	($from, $command, @data) = split /\s+/, $line;
+	my ($from, $command, @data) = split /\s+/, $line;
 
 	$from    = defined $from    ? $from    : '';
 	$command = defined $command ? $command : '';
