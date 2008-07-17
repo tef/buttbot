@@ -383,13 +383,13 @@ sub _send {
 }
 
 sub _fork {
-	my $pid = fork;
+	my $spoon = fork;
 
-	if (defined $pid) {
-		if ($pid == 0) { # is child process
+	if (defined $spoon) {
+		if ($spoon == 0) { # is child process
 			return;
 		} else {
-			print "exiting, child pid = $pid\n";
+			print "exiting, child pid = $spoon\n";
 			exit;
 		}
 	} else {
