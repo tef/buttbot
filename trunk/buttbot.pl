@@ -79,10 +79,10 @@ sub process_line {
 	$from    = defined $from    ? $from    : '';
 	$command = defined $command ? $command : '';
 
+	die "from server: @data" if $from eq 'ERROR';
+
 	# if server pings, ping back.
 	_pong($command =~ /^:\d+$/ ? $command : ":$CONF{nick}") if $from eq 'PING';
-
-	die "from server: @data" if $from eq 'ERROR';
 
   #If buttbot has successfully connected to the server, join a channel.
    if ($command eq "001") {
