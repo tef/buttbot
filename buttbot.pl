@@ -286,7 +286,7 @@ sub process_line {
 		}
 	}
 	#if messages come from channel, start buttifying
-      elsif ($to =~ /^#/ )  {
+      elsif ($to =~ /^\#/ )  {
 	  
 	  my $sender = $from;
 	  $sender =~ s/^:(.*)!.*$/$1/;
