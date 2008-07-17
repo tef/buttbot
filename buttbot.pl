@@ -127,7 +127,7 @@ sub cmd_privmsg {
 
 	#if messages come from channel, start buttifying
 	} elsif ($to =~ /^\#/) {
-		pm_channel($from, $to, $sub, @dat);
+		pm_channel($from, $to, $sub, @data);
 	
 	}
 }
