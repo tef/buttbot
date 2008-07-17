@@ -112,17 +112,29 @@ sub cmd_connect {
 sub cmd_privmsg {
 	my($from, @data) = @_;
 
-	#get destination of message
-        my $to=shift(@data);
-	#get first word of message (might be command)
-        my $sub=shift(@data);
-	## remove preceding ':'
-	$sub=~s/^://;
+	# get destination of message
+	my $to = shift @data;
 
-	##if a user private messages the bot...
-	if ($to eq $CONF{nick})
-	{
-		$to = $from;
+	# get first word of message (might be command)
+	my $sub = shift @data;
+
+	## remove preceding ':'
+	$sub =~ s/^://;
+
+	# if a user private messages the bot...
+	if ($to eq $CONF{nick}) {
+		pm_bot($from, $sub, @data);
+
+	#if messages come from channel, start buttifying
+	} elsif ($to =~ /^\#/) {
+		pm_channel($from, $to, $sub, @dat);
+	
+	}
+}
+
+sub pm_bot {
+	my ($to, $sub, @data) = @_;
+
 		$to =~ s/^:(.*)!.*$/$1/;
 		#If the command is !butt, buttify message.
 		if ($sub eq "!butt" and @data >0 ) 
@@ -295,11 +307,11 @@ sub cmd_privmsg {
 		
 			
 		}
-	}
-	#if messages come from channel, start buttifying
-      elsif ($to =~ /^\#/ )  {
-	  
-	  my $sender = $from;
+}
+
+sub pm_channel {
+	my ($sender, $to, $sub, @data) = @_;
+
 	  $sender =~ s/^:(.*)!.*$/$1/;
 	  if (exists $linestotal{$to})
 	  {
@@ -350,7 +362,6 @@ sub cmd_privmsg {
 		  _send("PRIVMSG $to :".join(" ",&buttify(@data)));
 	      }
 	      }
-	 }
 	 }
 }
 
