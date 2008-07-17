@@ -67,12 +67,18 @@ $CONF{channel} =~ s/\s+//;
 
 #== forever butting... ========================================================
 
-while (1) {
+process() while 1;
+
+#== subroutines ===============================================================
+
+sub process {
 	die "main: $!" if $!;
 
-	my @buffer = split /\n/, &gets();
+	process_line($_) for split /\n/, gets();
+}
 
-	foreach my $line (@buffer) {
+sub process_line {
+	my $line = shift;
 		print "$line\n";
 
 		($from, $command, @data) = split /\s+/, $line;
@@ -347,10 +353,7 @@ while (1) {
 	 }
 	 }
    }
- }
 }
-
-#== subroutines ===============================================================
 
 #for future determining of butting
 sub tobuttornottobutt
