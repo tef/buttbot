@@ -79,12 +79,13 @@ sub process {
 
 sub process_line {
 	my $line = shift;
-		print "$line\n";
+	print "$line\n";
 
-		($from, $command, @data) = split /\s+/, $line;
+	($from, $command, @data) = split /\s+/, $line;
 
-   $from ||= '';
-   $command ||= '';
+	$from    = defined $from    ? $from    : '';
+	$command = defined $command ? $command : '';
+
    #if server pings, ping back.
    if ($from eq "PING") {
 	   if ($command=~/^:\d+$/) {
