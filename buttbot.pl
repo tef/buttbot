@@ -9,12 +9,6 @@ $|++;
 
 my %CONF;
 
-$CONF{file} = shift;
-if (not $CONF{file}) {
-  $CONF{file}=$0;
-  $CONF{file}=~s/\.pl$/\.conf/i;
-}
-
 &readconf();
 
 my $socket = new IO::Socket::INET(
@@ -398,13 +392,16 @@ sub _fork {
 }
 
 sub readconf {
-  open my($fh), "$CONF{file}" or die "readconf: cannot open $CONF{file}";
+	my $file = shift;
+	($file = $0) =~ s/\.pl$/\.conf/i unless defined $file;
 
-  while (my $line = <$fh>) {
-    if (substr($line,0,1) ne "#") {
-     if ($line =~/^\s*([^\s]+)\s*=\s*(.+)$/) {
-        $CONF{lc($1)}=$2;
-      }
-     }
-  }   
+	open my($fh), $file or die "readconf: cannot open $file";
+
+	while (<$fh>) {
+		next if /^\#/;
+
+		if (/^\s*([^\s]+)\s*=\s*(.+)$/) {
+			$CONF{lc($1)} = $2;
+		}
+	}
 }
