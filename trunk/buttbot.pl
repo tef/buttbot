@@ -84,8 +84,18 @@ sub process_line {
 	# if server pings, ping back.
 	_pong($command =~ /^:\d+$/ ? $command : ":$CONF{nick}") if $from eq 'PING';
 
-  #If buttbot has successfully connected to the server, join a channel.
-   if ($command eq "001") {
+	# If buttbot has successfully connected to the server, join a channel.
+	if ($command eq '001') {
+		cmd_connect();
+
+	# otherwise, if it's a message
+	} elsif ($command eq 'PRIVMSG') {
+		cmd_privmsg($from, @data);
+
+	}
+}
+
+sub cmd_connect {
       _send("MODE $CONF{nick} -x"); # hiding hostnames is for wimps.
      if (defined $CONF{channel})
 	{
@@ -97,9 +107,11 @@ sub process_line {
 	{
 		_send("NICKSERV :identify $CONF{nickpass}");
 	}
-   } 
-	#otherwise, if it's a message
-	elsif ($command eq "PRIVMSG") {
+}
+
+sub cmd_privmsg {
+	my($from, @data) = @_;
+
 	#get destination of message
         my $to=shift(@data);
 	#get first word of message (might be command)
@@ -340,7 +352,6 @@ sub process_line {
 	      }
 	 }
 	 }
-   }
 }
 
 #for future determining of butting
