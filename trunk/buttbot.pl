@@ -86,17 +86,11 @@ sub process_line {
 	$from    = defined $from    ? $from    : '';
 	$command = defined $command ? $command : '';
 
-   #if server pings, ping back.
-   if ($from eq "PING") {
-	   if ($command=~/^:\d+$/) {
-	   		_send("PONG $command");
-	   } else {
-	  	 _send("PONG :$CONF{nick}");
-	   }	   
-   }
-   
-   die "from server: @data" if ($from eq "ERROR");
- 
+	# if server pings, ping back.
+	_pong($command =~ /^:\d+$/ ? $command : ":$CONF{nick}") if $from eq 'PING';
+
+	die "from server: @data" if $from eq 'ERROR';
+
   #If buttbot has successfully connected to the server, join a channel.
    if ($command eq "001") {
       _send("MODE $CONF{nick} -x"); # hiding hostnames is for wimps.
@@ -378,6 +372,10 @@ sub gets {
   $socket->recv($data, 1024);
 
   return $data;
+}
+
+sub pong {
+	_send("PONG $_[0]");
 }
 
 sub _send {
