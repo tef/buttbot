@@ -1,4 +1,4 @@
-severity = 4
+severity = 3
 
 # severity five ===============================================================
 
@@ -23,6 +23,9 @@ allow_last_statement_to_be_comma_separated_in_map_and_grep = 1
 # not everything is a package
 
 # severity three ==============================================================
+
+[-RegularExpressions::RequireExtendedFormatting]
+# they're not all complex
 
 # severity two ================================================================
 
