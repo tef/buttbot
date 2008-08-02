@@ -33,7 +33,6 @@ my ($normalfrequency, $friendfrequency);
 #last thing said by someone in the channel
 my (@previousdata);
 my ($previouschannel);
-my (@channels);
 my (%linestotal);
 my (%timeoflastbutting);
 
