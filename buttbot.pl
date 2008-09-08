@@ -9,7 +9,7 @@ $|++;
 
 my %CONF;
 
-&readconf();
+&readconf(@ARGV);
 
 my $socket = new IO::Socket::INET(
 	PeerAddr => $CONF{server},
