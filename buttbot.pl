@@ -362,7 +362,11 @@ sub pm_channel {
 			}
 	      } elsif ($sub eq "!butt" and @data >0 ) {
 	          if (($data[0] !~ /^!/) && ($data[0] !~ /^cout/)) {
-		  _send("PRIVMSG $to :".join(" ",&buttify(@data)));
+		  my @bread_and = &buttify(@data);
+		  # comparing lists is piss easy in python :(
+		  my $jam = join(" ", @data);
+		  my $cock = join(" ", @bread_and);
+		  _send("PRIVMSG $to :$cock") if ($jam ne $cock); 
 	      }
 	      }
 	 }
