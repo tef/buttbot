@@ -66,40 +66,40 @@ sub buttify {
 		@indices = grep { $_ != $index } @indices;
 	}
 
-  return @words;
+	return @words;
 }
 
 sub _buttsub {
-   my $word = shift;
+	my $word = shift;
 
-   # split off leading and trailing punctuation
-   my ($lp, $actual_word, $rp) = $word =~ /^([^A-Za-z]*)(.*?)([^A-Za-z]*)$/;
+	# split off leading and trailing punctuation
+	my ($lp, $actual_word, $rp) = $word =~ /^([^A-Za-z]*)(.*?)([^A-Za-z]*)$/;
 
-   return $word unless $actual_word;
-   
-   my @points = (0, $hyp->hyphenate($actual_word));
+	return $word unless $actual_word;
+	
+	my @points = (0, $hyp->hyphenate($actual_word));
 
-   my $factor = 2;
-   my $length = scalar @points;
-   my $replace = $length - 1 - int(rand($length ** $factor) ** (1 / $factor));
-   push @points, length($actual_word);
+	my $factor = 2;
+	my $length = scalar @points;
+	my $replace = $length - 1 - int(rand($length ** $factor) ** (1 / $factor));
+	push @points, length($actual_word);
 
-   my $l = $points[$replace];
-   my $r = $points[$replace + 1] - $l;
-   
-   while (substr($actual_word, $l + $r, 1) eq 't') { $r++ }
-   while ($l > 0 && substr($actual_word, $l - 1, 1) eq 'b') { $l-- }
-   my $sub = substr($actual_word, $l, $r);
-   my $butt = 'butt';
+	my $l = $points[$replace];
+	my $r = $points[$replace + 1] - $l;
+	
+	while (substr($actual_word, $l + $r, 1) eq 't') { $r++ }
+	while ($l > 0 && substr($actual_word, $l - 1, 1) eq 'b') { $l-- }
+	my $sub = substr($actual_word, $l, $r);
+	my $butt = 'butt';
 
-   if ($sub eq uc $sub) {
-     $butt = 'BUTT';
-   } elsif ($sub =~/^[A-Z]/) {
-     $butt = 'Butt';
-   } 
-   
-   substr($actual_word, $l, $r) = $butt;
-   return "$lp$actual_word$rp";
+	if ($sub eq uc $sub) {
+		$butt = 'BUTT';
+	} elsif ($sub =~/^[A-Z]/) {
+		$butt = 'Butt';
+	} 
+	
+	substr($actual_word, $l, $r) = $butt;
+	return "$lp$actual_word$rp";
 }
 
 sub _weighted_indices {
