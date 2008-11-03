@@ -20,7 +20,7 @@ sub on_privmsg {
 	my ($target, $text) = split(/ :/, $data, 2);
 
 	return unless ($target =~ Irssi::settings_get_str("butt_target_pattern"));
-	return 0 unless (rand(50) < 1);
+	return 0 unless (rand(Irssi::settings_get_int("butt_frequency")) < 1);
 	return 0 if ($text =~ /^!|^http:\/\/\S+$|butt|^\W+$/i);
 
 	my @words = split(/\s+/, $text);
@@ -44,6 +44,7 @@ sub on_kick {
 }
 
 Irssi::settings_add_str("irssibutt", "butt_target_pattern", "^#cobol\$");
+Irssi::settings_add_int("irssibutt", "butt_frequency", "50");
 
 Irssi::signal_add("event privmsg", \&on_privmsg);
 Irssi::signal_add("message kick", \&on_kick);
