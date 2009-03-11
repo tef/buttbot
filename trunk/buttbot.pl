@@ -71,8 +71,7 @@ sub process {
 
 sub cmd_pong {
     my $command = shift @_;
-    $command =~ s/^://;
-    pong($command =~ /^\d+$/ ? $command : "$CONF{nick} $command")
+    pong($command =~ /^:\d+$/ ? $command : "$CONF{nick} $command")
 }
 
 sub process_line {
