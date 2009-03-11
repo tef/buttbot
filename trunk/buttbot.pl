@@ -69,6 +69,12 @@ sub process {
     process_line($_) for split /\n/, gets();
 }
 
+sub cmd_pong {
+    my $command = shift @_;
+    $command =~ s/^://;
+    pong($command =~ /^\d+$/ ? $command : "$CONF{nick} $command")
+}
+
 sub process_line {
     my $line = shift;
     print "$line\n";
@@ -81,7 +87,10 @@ sub process_line {
     die "from server: @data" if $from eq 'ERROR';
 
     # if server pings, ping back.
-    pong($command =~ /^:\d+$/ ? $command : ":$CONF{nick}") if $from eq 'PING';
+
+    if ($from eq 'PING') {
+        cmd_pong($command);
+    }
 
     # If buttbot has successfully connected to the server, join a channel.
     if ($command eq '001') {
