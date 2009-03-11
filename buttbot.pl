@@ -91,7 +91,12 @@ sub process_line {
     } elsif ($command eq 'PRIVMSG') {
         cmd_privmsg($from, @data);
 
+    } elsif ($command eq 'INVITE' && $CONF{'invite'} ) {
+        my $c = $data[1];
+        $c =~ s/^://;
+        _send("JOIN $c");
     }
+        
 }
 
 sub cmd_connect {
