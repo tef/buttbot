@@ -1,40 +1,26 @@
 #eggdrop1.6 +/-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation.
 #
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
+# Buttbot port to eggdrop tcl
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
-#
-# Version Information (Major Additions and Bug Fixes!) can be found in the
-# Version.txt included in the package.
-#
-# Feature explanations, instructions, and HELP can be found in
-# How-to.txt included in the package.
+# Contributed by Gar (mkgarvin) <gar@comrade.us>
 #
 ##########################################################################
-
-#Make sure hyphen.tex exists
-package require textutil
-#TODO relative path instructions
-textutil::adjust::readPatterns "/home/lamer/hyphen.tex"
 
 #@##### SETUP THE SCRIPT #######
 # Please change the details below
 
+#Make sure hyphen.tex exists, it is part of the main buttbot repo
+package require textutil
+textutil::adjust::readPatterns "/home/lame/hyphen.tex"
+
+# Channel(s) you want your bot to buttify
 set channel "#lamechan"
 
 # People who get buttified more often
 set friends "lamedude lamerguy"
 
 # How often to buttify friends
-set friendfreq 25
+set friendfreq 20
 
 # People who don't get buttified
 set enemies ""
@@ -42,7 +28,8 @@ set enemies ""
 # How often to buttify everyone else
 set normalfreq 51
 
-#invite, pass, debug
+# Whether or not to log buttify activity, set to 1 to enable
+set logbutts 0
 
 #change this if you really have to
 set stopwords {
@@ -182,6 +169,7 @@ set stopwords {
 
 bind pubm - * checkbutt
 
+#this isn't *quite* like Tex->Hyphenate but it's as close as tcl does afaik
 proc hyphenate {word} {
     if {[catch {
             set h [textutil::adjust::adjust $word -hyphenate true -strictlength true -length [string length $word]]
@@ -203,23 +191,39 @@ proc rwssort {a b} {
 }
 
 proc tobuttornottobutt {nick} {
- global friends enemies friendfreq normalfreq
- if {[lsearch -exact $enemies $nick] != -1} {
-  return 1
- } elseif {[lsearch -exact $friends $nick] != -1} {
-  return [rand $friendfreq]
- } else {
-  return [rand $normalfreq]
- }
+    global friends enemies friendfreq normalfreq
+    if {[lsearch -exact $enemies $nick] != -1} {
+        return 1
+    } elseif {[lsearch -exact $friends $nick] != -1} {
+        return [rand $friendfreq]
+    } else {
+        return [rand $normalfreq]
+    }
 }
 
 proc buttsub {candidate} {
     set h [hyphenate $candidate]
+    set matched ""
     if {[llength $h] > 1} {
-        set h [lreplace $h 0 0 "butt"]
+        set firstsyllable [lindex $h 0]
+        regexp {^[A-Z]} $firstsyllable matched
+        if {[string toupper $firstsyllable] == $firstsyllable} {
+            set h [lreplace $h 0 0 "BUTT"]
+        } elseif {$matched != ""} {
+            set h [lreplace $h 0 0 "Butt"]
+        } else {
+            set h [lreplace $h 0 0 "butt"]
+        }
         set h [join $h ""]
     } else {
-        set h "butt"
+        regexp {^[A-Z]} $h matched
+        if {[string toupper $h] == $h} {
+            set h "BUTT"
+        } elseif {$matched != ""} {
+            set h "Butt"
+        } else {
+            set h "butt"
+        }
     }
     return $h
 }
@@ -228,10 +232,14 @@ proc buttify {text chan} {
     global stopwords
     set words [split $text " "]
     set repetitions [expr [llength $text] / 11]
-    set longest [lrange [lsort -unique -command rwssort $words] 0 $repetitions]
+    set longest [lsort -unique -command rwssort $words]
 
     foreach word $stopwords {
         set longest [lsearch -all -inline -not -exact $longest $word]
+    }
+
+    if {[llength $longest] > $repetitions} {
+        set longest [lrange $longest 0 $repetitions]
     }
 
     foreach candidate $longest {
@@ -244,7 +252,10 @@ proc buttify {text chan} {
         }
     }
     set buttspeak [join $words " "]
-    putserv "PRIVMSG $chan :$buttspeak"
+    if {$buttspeak != $text} {
+        if {$logbutts == 1} { putlog "buttified: $buttspeak" }
+        putserv "PRIVMSG $chan :$buttspeak"
+    }
 }
 
 proc checkbutt {nick host hand chan text} {
@@ -253,9 +264,10 @@ proc checkbutt {nick host hand chan text} {
     if {[lsearch -exact $channel $chan] == -1 || $nick == $botnick || [tobuttornottobutt $nick] != 0} {
         return 0
     } elseif {[llength $text] > 1} {
+        if {$logbutts == 1} { putlog "buttifying: $text" }
         utimer [expr [llength [split $text]]*0.2+1] [list buttify $text $chan]
         return 0
     }
 }
 
-putlog "buttbot loaded, ready to buttify maam"
+putlog "buttbot loaded. Ready to buttify, maam."
