@@ -203,33 +203,40 @@ proc tobuttornottobutt {nick} {
 
 proc buttsub {candidate} {
     set h [hyphenate $candidate]
-    set matched ""
+    set umatched ""
     if {[llength $h] > 1} {
         set firstsyllable [lindex $h 0]
-        regexp {^[A-Z]} $firstsyllable matched
+        regexp {^[A-Z]} $firstsyllable umatched
         if {[string toupper $firstsyllable] == $firstsyllable} {
             set h [lreplace $h 0 0 "BUTT"]
-        } elseif {$matched != ""} {
+        } elseif {$umatched != ""} {
             set h [lreplace $h 0 0 "Butt"]
         } else {
             set h [lreplace $h 0 0 "butt"]
         }
         set h [join $h ""]
     } else {
-        regexp {^[A-Z]} $h matched
+        set smatched ""
+        regexp {'?s$} $h smatched
+        regexp {^[A-Z]} $h umatched
         if {[string toupper $h] == $h} {
             set h "BUTT"
-        } elseif {$matched != ""} {
+        } elseif {$umatched != ""} {
             set h "Butt"
         } else {
             set h "butt"
+        }
+        if {$smatched == "s"} {
+            append h "s"
+        } elseif {$smatched == "'s"} {
+            append h "'s"
         }
     }
     return $h
 }
 
 proc buttify {text chan} {
-    global stopwords
+    global stopwords logbutts
     set words [split $text " "]
     set repetitions [expr [llength $text] / 11]
     set longest [lsort -unique -command rwssort $words]
@@ -259,7 +266,7 @@ proc buttify {text chan} {
 }
 
 proc checkbutt {nick host hand chan text} {
-    global botnick channel
+    global botnick channel logbutts
     #make sure we're in the right channel and this isn't us talking and we should be buttifying
     if {[lsearch -exact $channel $chan] == -1 || $nick == $botnick || [tobuttornottobutt $nick] != 0} {
         return 0
