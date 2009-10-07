@@ -37,8 +37,8 @@ my (%linestotal);
 my (%timeoflastbutting);
 
 #pre-setting frequencies
-$friendfrequency = 37;
-$normalfrequency = 51;
+$friendfrequency = $CONF{friendfreq} || 37;
+$normalfrequency = $CONF{normfreq} || 51;
 
 #remove whitespace!
 $CONF{channel} =~ s/\s+//;
@@ -215,7 +215,7 @@ sub pm_channel {
                      _send("PRIVMSG $to :$cock") if ($jam ne $cock); 
                 }
             }
-        } elsif ($sub eq "!butt" and @data >0 ) {
+        } elsif ($sub eq "!butt" and ($CONF{buttcommand} ne "no") and @data >0 ) {
             if (($data[0] !~ /^!/) && ($data[0] !~ /^cout/)) {
                 my @bread_and = &buttify(@data);
                 # comparing lists is piss easy in python :(
