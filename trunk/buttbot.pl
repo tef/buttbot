@@ -151,8 +151,14 @@ sub pm_bot {
     #If the command is !butt, buttify message.
     
     ##if the first word in the string is equal to the password, set the user to be the admin
-    if ($sub eq $CONF{pass}) {
+    if ($sub eq "!auth ".$CONF{pass}) {
         $auth=$from;
+    } elsif ($sub eq "!butt" and @data >0 ) {
+	my @bread_and = &buttify(@data);
+	# comparing lists is piss easy in python :(
+	my $jam = join(" ", @data);
+	my $cock = join(" ", @bread_and);
+	_send("PRIVMSG $to :$cock") if ($jam ne $cock); 
     }
 
     ##ADMIN FUNCTIONS
@@ -182,7 +188,7 @@ sub pm_channel {
 
     ##ignores statements from cout and users containing the word "bot"
     if (($from !~/^:cout/) && ($from !~/^:[^!]*bot[^!]*!/i)) {
-        if ($sub !~ /^!/) {
+        if ($sub !~ /^!/ && ($sub !~ /^\./)) {
             my $rnd = 1;
             unshift (@data,$sub);
             if (@data > 1) {
