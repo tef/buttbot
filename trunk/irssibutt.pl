@@ -24,7 +24,7 @@ sub on_privmsg {
 	return 0 if ($text =~ /^!|^http:\/\/\S+$|butt|^\W+$/i);
 
 	my @words = split(/\s+/, $text);
-	my @replaced_words = Butts::buttify(@words);
+	my @replaced_words = Butts::buttify("butt", @words);
 	my $replaced_text = join(" ", @replaced_words);
 
 	unless ($text eq $replaced_text) {
