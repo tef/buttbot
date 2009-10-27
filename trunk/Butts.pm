@@ -27,6 +27,7 @@ if (-f STOPWORDS && -r STOPWORDS) {
 }
 
 sub buttify {
+  my $meme = shift;
 	my @words = @_;
 	my $repetitions = int(@words / 11) + 1;
 	my $c = 0;
@@ -46,8 +47,9 @@ sub buttify {
 
 		my $is_word = $word !~ /^[\d\W+]+$/;
 		my $is_stop = grep /\Q$word\E/i, @stopwords;
+    my $is_meme = $word =~ /\Q$meme\E/i;
 
-		$is_word and not $is_stop;
+		$is_word and not $is_stop and not $is_meme;
 	} @longest;
 
 	print 'Words in order: ' . join(', ', map { $words[$_] } @longest) . "\n" if DEBUG;
@@ -62,7 +64,7 @@ sub buttify {
 	for my $c (0 .. $repetitions - 1) {
 		my $index = $indices[$c];
 
-		$words[$index] = _buttsub($words[$index]);
+		$words[$index] = _buttsub($meme, $words[$index]);
 		@indices = grep { $_ != $index } @indices;
 	}
 
@@ -70,6 +72,7 @@ sub buttify {
 }
 
 sub _buttsub {
+  my $meme = shift;
 	my $word = shift;
 
 	# split off leading and trailing punctuation
@@ -90,12 +93,12 @@ sub _buttsub {
 	while (substr($actual_word, $l + $r, 1) eq 't') { $r++ }
 	while ($l > 0 && substr($actual_word, $l - 1, 1) eq 'b') { $l-- }
 	my $sub = substr($actual_word, $l, $r);
-	my $butt = 'butt';
+	my $butt = lc($meme);
 
 	if ($sub eq uc $sub) {
-		$butt = 'BUTT';
+		$butt = uc($meme);
 	} elsif ($sub =~/^[A-Z]/) {
-		$butt = 'Butt';
+		$butt = ucfirst($meme);
 	} 
 	
 	substr($actual_word, $l, $r) = $butt;

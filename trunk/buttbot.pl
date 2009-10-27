@@ -36,9 +36,13 @@ my ($previouschannel);
 my (%linestotal);
 my (%timeoflastbutting);
 
+
 #pre-setting frequencies
 $friendfrequency = $CONF{friendfreq} || 37;
 $normalfrequency = $CONF{normfreq} || 51;
+
+#The meme.
+my $meme = $CONF{meme} || "butt";
 
 #remove whitespace!
 $CONF{channel} =~ s/\s+//;
@@ -151,10 +155,11 @@ sub pm_bot {
     #If the command is !butt, buttify message.
     
     ##if the first word in the string is equal to the password, set the user to be the admin
-    if ($sub eq "!auth ".$CONF{pass}) {
+    if ($sub eq "!auth" && $data[0] eq $CONF{pass}) {
         $auth=$from;
-    } elsif ($sub eq "!butt" and @data >0 ) {
-	my @bread_and = &buttify(@data);
+        _send("PRIVMSG $to :Authed.");
+    } elsif ($sub eq "!$meme" and @data >0 ) {
+	my @bread_and = &buttify($meme, @data);
 	# comparing lists is piss easy in python :(
 	my $jam = join(" ", @data);
 	my $cock = join(" ", @bread_and);
@@ -170,6 +175,13 @@ sub pm_bot {
         } elsif ($sub eq "!leave" and @data > 0) {
             $CONF{channel} =~ s/$data[0]//;
             _send("PART $data[0]");
+        } elsif ( $sub eq "!meme" and ($CONF{setmeme} ne "no") and @data >0 ) {
+            $meme = $data[0];
+            _send("PRIVMSG $to :Meme changed to $meme.");
+            if ($CONF{changenick} ne 'no') {
+                $CONF{nick} = $meme."bot";
+                _send("NICK :$CONF{nick}");
+            }
         }
     }
 }
@@ -206,7 +218,7 @@ sub pm_channel {
                     # only butt if the command is not the only word
                     if (@data > 1 && $data[1] ne "\1") {
                         my $first = shift(@data);
-                        my @butted = &buttify(@data);
+                        my @butted = &buttify($meme, @data);
                         unshift(@butted, $first);
 
                         my $jam = join(" ", @data);
@@ -214,20 +226,24 @@ sub pm_channel {
                         _send("PRIVMSG $to :$cock") if ($jam ne $cock); 
                     }
                 } else {
-                     my @bread_and = &buttify(@data);
+                     my @bread_and = &buttify($meme, @data);
                      # comparing lists is piss easy in python :(
                      my $jam = join(" ", @data);
                      my $cock = join(" ", @bread_and);
                      _send("PRIVMSG $to :$cock") if ($jam ne $cock); 
                 }
             }
-        } elsif ($sub eq "!butt" and ($CONF{buttcommand} ne "no") and @data >0 ) {
+        } elsif ($sub eq "!$meme" && @data >0 ) {
             if (($data[0] !~ /^!/) && ($data[0] !~ /^cout/)) {
-                my @bread_and = &buttify(@data);
+                my @bread_and = &buttify($meme, @data);
                 # comparing lists is piss easy in python :(
                 my $jam = join(" ", @data);
                 my $cock = join(" ", @bread_and);
-                _send("PRIVMSG $to :$cock") if ($jam ne $cock); 
+                if ($CONF{buttcommand} ne 'no') {
+                  _send("PRIVMSG $to :$cock") if ($jam ne $cock); 
+                } else {
+                  _send("PRIVMSG $sender :$cock") if ($jam ne $cock); 
+                }
             }
         }
     }
