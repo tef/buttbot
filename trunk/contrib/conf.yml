@@ -1,0 +1,19 @@
+connection:
+    server: cowu.be
+    port: 6667
+    nick: butty
+    ident: null
+    gecos: heh
+    channels: ['#m00p']
+settings:
+    meme:       butt
+    setmeme:    yes
+    changenick: yes
+    debug:      yes
+    invite:     yes
+    pass:       SOMESECRET
+    friends:    []
+    enemies:    []
+    frequency:
+         friend: 37
+         normal: 51
