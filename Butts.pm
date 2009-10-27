@@ -63,7 +63,7 @@ sub buttify {
 
 	for my $c (0 .. $repetitions - 1) {
 		my $index = $indices[$c];
-		next if (!$index); 
+		next if (!defined $index); 
 		$words[$index] = _buttsub($meme, $words[$index]);
 		@indices = grep { $_ != $index } @indices;
 	}
