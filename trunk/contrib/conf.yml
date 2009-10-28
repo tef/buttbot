@@ -11,9 +11,9 @@ settings:
     changenick: yes
     debug:      yes
     invite:     yes
-    pass:       SOMESECRET
-    friends:    []
-    enemies:    []
+    pass:       moo
+    friends:    { }
+    enemies:    { }
     frequency:
          friend: 37
-         normal: 51
+         normal: 3
