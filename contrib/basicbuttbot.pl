@@ -26,11 +26,11 @@ use POE;
 
 sub init {
     my $self = shift;
-    my $config = YAML::Any::LoadFile($conf_file);
-    $self->{$_} = $config->{connection}->{$_}
-      for (keys %{$config->{connection}});
-    $self->{settings}->{$_} = $config->{settings}->{$_}
-      for (keys %{$config->{settings}});
+
+    $self->{settings}->{friends} = {};
+    $self->{settings}->{friends} = {};
+
+    $self->load_config(0);
 
     $self->{authed_nicks} = {};
     $self->{in_channels} = {};
@@ -40,6 +40,33 @@ sub init {
     }
 
     1;
+}
+
+sub load_config {
+    my ($self, $reload) = @_;
+    $reload = 0 unless defined $reload;
+
+    my $config = YAML::Any::LoadFile($conf_file);
+
+    # only load these settings at startup.
+    unless ($reload) {
+        $self->{$_} = $config->{connection}->{$_}
+          for (keys %{$config->{connection}});
+    }
+
+    my ($old_friends, $old_enemies)
+      = ($self->{settings}->{friends},
+         $self->{settings}->{enemies});
+
+    $self->{settings}->{$_} = $config->{settings}->{$_}
+      for (keys %{$config->{settings}});
+
+    # merge the old copies with the new ones (in case we're reloading)
+
+    $self->{settings}->{friends}->{keys %$old_friends}
+      = values %{$old_friends};
+    $self->{settings}->{enemies}->{keys %$old_enemies}
+      = values %{$old_enemies};
 }
 
 #@OVERRIDE
@@ -89,6 +116,12 @@ sub leave_channel {
     $poe_kernel->post($self->{IRCNAME}, 'part', $channel, $part_msg);
 }
 
+sub change_nick {
+    my ($self, $new_nick) = @_;
+    $poe_kernel->post($self->{IRCNAME}, 'nick', $new_nick);
+    $self->log("IRC: changing nick to $new_nick\n");
+}
+
 sub in_channel {
     my ($self, $channel, $present) = @_;
     if (defined $present) {
@@ -105,6 +138,17 @@ sub in_channel {
 sub get_all_channels {
     my ($self) = @_;
     return keys %{ $self->{in_channels} };
+}
+
+
+sub nick_change {
+    my ($self, $from, $to) = @_;
+
+    if ($self->is_me($from)) {
+        $self->{nick} = $to;
+        $self->log("IRC: changed own nick from $from to $to\n");
+    }
+    return;
 }
 
 sub chanjoin {
@@ -237,7 +281,7 @@ sub handle_pm_command {
     }
 
     # do some authentication
-    if ( ! $self->is_authed($who)) {
+    unless ($self->is_authed($who)) {
         $self->pm_reply($who, "You're not authenticated :(");
         return 1;
     }
@@ -275,10 +319,18 @@ sub handle_pm_command {
 
     } elsif ($cmd eq 'change-nick') {
         #TODO: this
-        $self->pm_reply($who, "Sorry, not implemented yet");
-
+        unless ($self->config_bool('changenick')) {
+            $self->pm_reply($who, "Sorry, changing nicks is disabled.");
+            return 1;
+        }
+        if ($args =~ m/^(\w+)/) {
+            $self->change_nick($1);
+            $self->pm_reply($who, "Ok.");
+        } else {
+            $self->pm_reply($who, "Can't change it to that, boss");
+        }
     } elsif ($cmd eq 'set-meme') {
-        if (!$self->config_bool('set_meme')) {
+        unless ($self->config_bool('set_meme')) {
             $self->pm_reply($who, "Changing the meme is disabled, sorry");
             return 1;
         }
@@ -295,6 +347,15 @@ sub handle_pm_command {
     } elsif ($cmd eq 'channel-list') {
         my @channels = $self->get_all_channels;;
         $self->pm_reply($who, "I'm in: " . join(', ', @channels));
+    } elsif ($cmd eq 'reload') {
+        unless ($self->config_bool('reload')) {
+            $self->pm_reply($who, "Reloading is disabled.");
+            return 1;
+        }
+        # reload settings, but not connection info.
+        $self->load_config(1);
+        $self->pm_reply($who, "Config reloaded");
+
     } else {
         $self->pm_reply($who, "Dunno what you want.");
     }
@@ -318,7 +379,7 @@ sub handle_channel_command {
         return 1;
     }
 
-    return 0; # TODO: unimplemented.
+    return 0;                   # TODO: unimplemented.
 
     # TODO: !stopit - adds them to the enemies list.
     # TODO: !butt - randomly butts something?
@@ -341,23 +402,23 @@ sub buttify_message {
 
 sub to_butt_or_not_to_butt {
     my ($self, $sufferer) = @_;
-    my $rnd = 0;
+    my $rnd_max = 0;
     my $frequencies = $self->config('frequency');
 
     return 0 if $self->might_be_a_bot($sufferer);
 
     if ($self->is_enemy($sufferer)) {
-        $rnd = 0;
-        $self->log("BUTT: Enemy [$sufferer], not butting\n");
+        $self->log("BUTT: [$sufferer:enemy] not butting\n");
+        return 0;
     } elsif ($self->is_friend($sufferer)) {
-        $rnd = int rand $frequencies->{friend};
-        $self->log("BUTT: [friend] rand is $rnd\n");
+        $rnd_max = $frequencies->{friend};
+        $self->log("BUTT: [$sufferer:friend] prob is 1/$rnd_max\n");
     } else {
-        $rnd = int rand $frequencies->{normal};
-        $self->log("BUTT: [normal] rand is $rnd\n");
+        $rnd_max = $frequencies->{normal};
+        $self->log("BUTT: [$sufferer:normal] prob is 1/$rnd_max\n");
     }
-
-    return ($rnd==1);
+    my $rnd = int rand $rnd_max;
+    return ($rnd==0);
 }
 
 sub might_be_a_bot {
