@@ -2,12 +2,21 @@
 use strict;
 use warnings;
 
-use Butts qw(buttify);
+use Butts;
 
-my $butt = shift;
-$butt = $butt || "butt";
+my $butt = $ARGV[0] || "butt";
+my $buttifier = Butts->new(meme => $butt, debug => 1,
+                            replace_freq => $ARGV[1] // 0.5);
 
-while(<>) {
-chomp;
-print join(" ", buttify($butt,split(/\s+/, $_)))."\n";
+print "butt repeat rate is " . $buttifier->{replace_freq} . $/;
+while(<STDIN>) {
+
+    # The old way
+
+    # chomp
+    # print join(" ", $buttifier->buttify(split(/\s+/, $_)))."\n";
+
+    # The new way
+
+    print $buttifier->buttify_string, $/;
 }
