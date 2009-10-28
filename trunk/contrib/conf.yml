@@ -12,9 +12,10 @@ settings:
     changenick: Yes
     debug:      Yes
     invite:     Yes
+    reload:     Yes # you probably don't want to change this.
     pass:       moo
-    friends:    { }
-    enemies:    { }
+    friends:    {shabble: 1, tef: 1 }
+    enemies:    {}
     frequency:
-         friend: 37
+         friend: 10
          normal: 3
