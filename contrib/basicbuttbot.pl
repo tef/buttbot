@@ -169,7 +169,7 @@ sub said {
     # butting is the default behaviour.
     $self->log("BUTT: Might butt\n");
     if ($self->to_butt_or_not_to_butt($who)) {
-        $self->log("BUTT: Buttiing $who in [$channel]\n");
+        $self->log("BUTT: Butting $who in [$channel]\n");
         $self->buttify_message($who, $channel, $body, 0);
     }
 
@@ -344,6 +344,8 @@ sub to_butt_or_not_to_butt {
     my $rnd = 0;
     my $frequencies = $self->config('frequency');
 
+    return 0 if $self->might_be_a_bot($sufferer);
+
     if ($self->is_enemy($sufferer)) {
         $rnd = 0;
         $self->log("BUTT: Enemy [$sufferer], not butting\n");
@@ -356,6 +358,11 @@ sub to_butt_or_not_to_butt {
     }
 
     return ($rnd==1);
+}
+
+sub might_be_a_bot {
+    my ($self, $who) = @_;
+    return ($who =~ m/cout|(?:bot$)/i);
 }
 
 sub is_enemy {
