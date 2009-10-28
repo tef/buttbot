@@ -4,7 +4,7 @@ connection:
     nick: butty
     ident: null
     gecos: heh
-    channels: ['#m00p']
+    channels: ['#m33p']
 settings:
     cmd_prefix: '!'
     meme:       butt

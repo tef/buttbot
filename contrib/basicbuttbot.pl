@@ -227,7 +227,7 @@ sub handle_said_emoted {
 
     # butting is the default behaviour.
     $self->log("BUTT: Might butt\n");
-    if ($self->to_butt_or_not_to_butt($who)) {
+    if ($self->to_butt_or_not_to_butt($who, $body)) {
         $self->log("BUTT: Butting $who in [$channel]\n");
         $self->buttify_message($who, $channel, $body, $reply_as_emote, 0);
     }
@@ -413,6 +413,11 @@ sub buttify_message {
 
     my $butt_msg = $self->{butter}->buttify_string($what);
 
+    unless ($self->_was_string_butted($what, $butt_msg)) {
+        $self->log("BUTT: String \"$butt_msg\" wasn't butted");
+        return 0;
+    }
+
     if ($reply_as_emote) {
         $self->emote(channel => $where, who => $who,
                    body => $butt_msg, address => 0);
@@ -420,15 +425,21 @@ sub buttify_message {
         $self->say(channel => $where, who => $who,
                    body => $butt_msg, address => $prefix_addressee);
     }
-    1;
+    return;
 }
 
 sub to_butt_or_not_to_butt {
-    my ($self, $sufferer) = @_;
+    my ($self, $sufferer, $message) = @_;
     my $rnd_max = 0;
     my $frequencies = $self->config('frequency');
 
     return 0 if $self->might_be_a_bot($sufferer);
+
+    # Fixes issue 6.
+    unless ($self->_is_string_buttable($message)) {
+        $self->log("BUTT: String is not buttable");
+        return 0;
+    }
 
     if ($self->is_enemy($sufferer)) {
         $self->log("BUTT: [$sufferer:enemy] not butting\n");
@@ -442,6 +453,26 @@ sub to_butt_or_not_to_butt {
     }
     my $rnd = int rand $rnd_max;
     return ($rnd==0);
+}
+
+# FIX for
+# http://code.google.com/p/buttbot/issues/detail?id=6
+# Message must contain at least some word characters that we can butt.
+sub _is_string_buttable {
+    my ($self, $str) = @_;
+    return $str =~ m/[a-zA-Z]+/;
+}
+
+# test if a string is the same as it was pre- and post-butting.
+# returns true if strings are different
+sub _was_string_butted {
+    my ($self, $in, $out) = @_;
+    my $meme = $self->config('meme');
+
+    # we can't trust whitespace, since we might have trimmed it differently.
+    $in =~ s/\s+//g;
+    $out =~ s/\s+//g;
+    return (lc($in) ne lc($out)) && ($out =~ m/\Q$meme\E/i);
 }
 
 sub might_be_a_bot {

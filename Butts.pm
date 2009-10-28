@@ -5,6 +5,7 @@ use warnings;
 
 use Math::Random;
 use TeX::Hyphen;
+use Data::Dumper;
 use Carp;
 
 use fields qw/replace_freq
@@ -13,7 +14,9 @@ use fields qw/replace_freq
               stopwords_file
               hyphenator
               stopwords
-              debug/;
+              debug
+              _words
+              _word_indices/;
 
 sub new {
     my Butts $self = shift;
@@ -79,13 +82,53 @@ sub is_meme {
 
 }
 
+sub split_preserving_whitespace {
+    my ($string) = @_;
+
+    my ($leading_ws, $remainder) = ($string =~ m/^(\s*)(.*)$/);
+    $leading_ws //= '';
+
+    my @all_split = split(/(\s+)/, $remainder);
+    my (@words, @ws);
+    foreach my $tok (@all_split) {
+        if ($tok =~ m/^\s+$/) {
+            push @ws, $tok
+        } else {
+            push @words, $tok
+        }
+    }
+    return ($leading_ws, \@words, \@ws);
+}
+
+
+sub reassemble_with_whitespace {
+    my ($leading, $words, $ws) = @_;
+
+    # interleave the two arrays. Words always come first, because
+    # any leading space is in $leading.
+    # http://www.perlmonks.org/?node_id=53605
+
+    # if things are different sizes we'll end up with some undefs,
+    # so grep them out.
+    my @ret = grep { defined } map { $words->[$_], $ws->[$_] }
+      0 .. ($#$words > $#$ws ? $#$words : $#$ws);
+    # and convert back to a string.
+    return $leading . join('', @ret);
+}
+
 sub buttify_string($_) {
     my $self = shift;
     # glom a string from $_ if we didn't get one passed.
     my $str = (@_ ? $_[0] : $_);
     chomp($str);
-    my @words = split /\s+/, $str;
-    return join(" ", $self->buttify(@words));
+
+    # FIX for http://code.google.com/p/buttbot/issues/detail?id=7
+    my ($leading, $words, $whitespace)
+      = split_preserving_whitespace($str);
+
+    my @butted_words = $self->buttify(@$words);
+
+    return reassemble_with_whitespace($leading, \@butted_words, $whitespace);
 }
 
 sub buttify {
@@ -93,6 +136,7 @@ sub buttify {
 	my $how_many_butts = int(@words * $self->{replace_freq}) + 1;
     my $debug = $self->{debug};
 
+    $self->{_words} = \@words;
 	# sort indices by word length
 	my @word_idxs_len_sorted = do {
 		my $c;
@@ -113,6 +157,8 @@ sub buttify {
 		$is_word and not $is_stop and not $is_meme;
 	} @word_idxs_len_sorted;
 
+    $self->{_word_indices} = \@word_idxs_len_sorted;
+
     # bail out if we've got nothing left. This happens
     # when a string is comprised entirely of stop-words.
     unless (@word_idxs_len_sorted) {
@@ -128,14 +174,24 @@ sub buttify {
 
     $self->log("buttifying with $how_many_butts repetitions");
     my $words_butted = {};
+    my @initial_weights = _sq_weight_indices(scalar @word_idxs_len_sorted);
 
-    my ($non_butted_indices, $xx_n, $xx_p, $xx_x) 
-      = $self->_build_weighted_index(\@word_idxs_len_sorted, $words_butted);
+    # Selecting words to butt works in the following way:
+
+    #  * each (non-stop) word-index is assigned a weighting based on it's
+    #    ordinal when sorted by (word) length. So, the longest word has weight =
+    #    num_words ** 2, second longest is (num_words-1)**2, ...
+
+    #  * A random distribution selects some index proportional to its weight.
+    #  * The word at this index is butted.
+    #  * The index is removed from consideration for subsequent buttings.
 
 	for my $c (0 .. $how_many_butts-1) {
+        my ($xx_n, $xx_p, $xx_x)
+          = $self->_build_weightings_for_index(\@initial_weights, $words_butted);
 
         my $random_idx  = get_walker_rand($xx_n, $xx_p, $xx_x);
-        my $idx_to_butt = $non_butted_indices->[$random_idx];
+        my $idx_to_butt = $word_idxs_len_sorted[$random_idx];
 
         $self->log("Butting word idx: $idx_to_butt [",
                    $words[$idx_to_butt], "]");
@@ -143,10 +199,7 @@ sub buttify {
 		$words[$idx_to_butt]
           = $self->_buttsub($words[$idx_to_butt]);
 
-        $words_butted->{$idx_to_butt} = 1;
-        ($non_butted_indices, $xx_n, $xx_p, $xx_x) 
-          = $self->_build_weighted_index(\@word_idxs_len_sorted, $words_butted);
-
+        $words_butted->{$random_idx} = 1;
 	}
 
 	return @words;
@@ -161,7 +214,7 @@ sub _buttsub {
 	my ($lp, $actual_word, $rp) = $word =~ /^([^A-Za-z]*)(.*?)([^A-Za-z]*)$/;
 
 	return $word unless $actual_word;
-	
+
 	my @points = (0, $self->{hyphenator}->hyphenate($actual_word));
 
 	my $factor = 2;
@@ -171,7 +224,7 @@ sub _buttsub {
 
 	my $l = $points[$replace];
 	my $r = $points[$replace + 1] - $l;
-	
+
 	while (substr($actual_word, $l + $r, 1) eq 't') {
         $r++;
     }
@@ -186,26 +239,34 @@ sub _buttsub {
 	} elsif ($sub =~/^[A-Z]/) {
 		$butt = ucfirst($meme);
 	}
-	
+
 	substr($actual_word, $l, $r) = $butt;
 	return $lp . $actual_word . $rp;
 }
 
-sub _build_weighted_index {
-    my $self = shift;
-    my (@indices) = @{ shift() },
-    my $butted_indices = shift;
+sub _build_weightings_for_index {
+    my ($self, $initial_weights, $butted_indices) = @_;
 
-    $self->log("Word indices remaining: ", @indices);
+    #$self->log("Word indices remaining: ", @indices);
 
-    my @non_butted_indices = grep { !exists ($butted_indices->{$_}) } @indices;
-    my @idx_weights = _sq_weight_indices(scalar @non_butted_indices);
+    my $i = 0;
+    $self->log(Dumper($butted_indices));
+    $self->log(Dumper($initial_weights));
 
-    $self->log('index weightings: ',
-               join(", ", @idx_weights));
+    my @idx_weights = map {
+        exists($butted_indices->{$i++})?0:$_
+    } @$initial_weights;
+
+    my $str;
+    $i = 0;
+    for (@{$self->{_word_indices}}) {
+        $str .= "\tIndex: $_: " . $self->{_words}->[$_]
+          . " ,weight=" . $idx_weights[$i++] . "\n";
+    }
+    $self->log("index weightings:\n" . $str);
 
     my ($n, $p, $x) = setup_walker_rand(\@idx_weights);
-    return (\@non_butted_indices, $n, $p, $x)
+    return ($n, $p, $x)
 }
 
 sub _sq_weight_indices {
