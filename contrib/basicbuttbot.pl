@@ -28,7 +28,7 @@ sub init {
     my $self = shift;
 
     $self->{settings}->{friends} = {};
-    $self->{settings}->{friends} = {};
+    $self->{settings}->{enemies} = {};
 
     $self->load_config(0);
 
@@ -185,8 +185,20 @@ sub kicked {
     return;
 }
 
+# TODO: refactor these 3 better. Emote should never have to deal with commands
+# or prefixes.  Just a message to be re-butted.
+sub emoted {
+    my ($self, $ref) = @_;
+    $self->handle_said_emoted($ref, 1);
+}
+
 sub said {
     my ($self, $ref) = @_;
+    $self->handle_said_emoted($ref, 0);
+}
+
+sub handle_said_emoted {
+    my ($self, $ref, $reply_as_emote) = @_;
     # slicin' ma hashes.
     my ($channel, $body, $address, $who) =
       @{$ref}{qw/channel body address who/};
@@ -214,7 +226,7 @@ sub said {
     $self->log("BUTT: Might butt\n");
     if ($self->to_butt_or_not_to_butt($who)) {
         $self->log("BUTT: Butting $who in [$channel]\n");
-        $self->buttify_message($who, $channel, $body, 0);
+        $self->buttify_message($who, $channel, $body, $reply_as_emote, 0);
     }
 
     return;
@@ -318,7 +330,6 @@ sub handle_pm_command {
         }
 
     } elsif ($cmd eq 'change-nick') {
-        #TODO: this
         unless ($self->config_bool('changenick')) {
             $self->pm_reply($who, "Sorry, changing nicks is disabled.");
             return 1;
@@ -379,14 +390,17 @@ sub handle_channel_command {
         return 1;
     }
 
-    return 0;                   # TODO: unimplemented.
+    return 0;
 
     # TODO: !stopit - adds them to the enemies list.
     # TODO: !butt - randomly butts something?
 }
 
 sub buttify_message {
-    my ($self, $who, $where, $what, $prefix_addressee) = @_;
+    my ($self, $who, $where,
+        $what, $reply_as_emote,
+        $prefix_addressee) = @_;
+
     my $meme = $self->config('meme');
 
     $prefix_addressee = 0 unless defined $prefix_addressee;
@@ -395,8 +409,13 @@ sub buttify_message {
     my @butted_bits = Butts::buttify($meme, @butt_bits);
     my $butt_msg = join ' ', @butted_bits;
 
-    $self->say(channel => $where, who => $who,
-               body => $butt_msg, address => $prefix_addressee);
+    if ($reply_as_emote) {
+        $self->emote(channel => $where, who => $who,
+                   body => $butt_msg, address => 0);
+    } else {
+        $self->say(channel => $where, who => $who,
+                   body => $butt_msg, address => $prefix_addressee);
+    }
     1;
 }
 
