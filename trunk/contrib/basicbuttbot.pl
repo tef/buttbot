@@ -58,7 +58,7 @@ sub handle_err_too_many_chans {
       = @_[OBJECT, ARG0, ARG1, ARG2];
     $self->log("IRC: too many channels:\n" . Dumper($msg_parsed) . "\n");
     # TODO: how can we let the user who requested us know that we're
-    # unable to comply.  Maybe keep a queue of pending commands, and
+    # unable to comply?  Maybe keep a queue of pending commands, and
     # only respond ok/err when we get an appropriate response from server.
     return;
 }
@@ -66,7 +66,12 @@ sub handle_err_too_many_chans {
 sub handle_invite {
     my ($self, $inviter, $channel) = @_[OBJECT, ARG0, ARG1];
     $inviter = $self->nick_strip($inviter);
-    $self->log("IRC: Going to join $channel, invited by $inviter\n");
+    if ($self->config_bool('invite')) {
+        $self->log("IRC: Going to join $channel, invited by $inviter\n");
+    } else {
+        $self->pm_reply($inviter, "Sorry, inviting is disabled by the admin.");
+        $self->log("IRC: invite refused from $inviter to $channel\n");
+    }
     $self->join_channel($channel);
 }
 
@@ -148,10 +153,14 @@ sub said {
     print STDERR Dumper($ref);
     print STDERR "\n---------\n";
 
-    if ($channel ne 'msg' && $address ne '') {
+    if ($channel ne 'msg') {
+        my $addressed = $address ne 'msg';
         # normal command
         # eg: <bob> ButtBot: stop it
-        return if $self->handle_channel_command($who, $channel, $body);
+        return if $self->handle_channel_command($who,
+                                                $channel,
+                                                $body,
+                                                $addressed);
     } elsif ($channel eq 'msg') {
         # parse for command
         return if $self->handle_pm_command($who, $body);
@@ -161,16 +170,22 @@ sub said {
     $self->log("BUTT: Might butt\n");
     if ($self->to_butt_or_not_to_butt($who)) {
         $self->log("BUTT: Buttiing $who in [$channel]\n");
-        $self->buttify_message($who, $channel, $body);
+        $self->buttify_message($who, $channel, $body, 0);
     }
 
     return;
 }
 
-sub _parse_command {
-    my ($msg) = @_;
+sub parse_command {
+    my ($self, $msg, $require_prefix) = @_;
+    my $cmd_prefix = quotemeta($self->config('cmd_prefix'));
 
-    if ($msg =~ m/^!([\w_-]+)\s*(.*)$/) {
+    $require_prefix = 1 unless defined $require_prefix;
+    if (!$require_prefix) {
+        $cmd_prefix .= '?';
+    }
+
+    if ($msg =~ m/^$cmd_prefix([\w_-]+)\s*(.*)$/) {
         return ($1, $2);
     } else {
         return ();
@@ -200,7 +215,7 @@ sub handle_pm_command {
 
     $self->log("CMD: testing for PM command: [$who], [$msg]\n");
 
-    my ($cmd, $args) = _parse_command($msg);
+    my ($cmd, $args) = $self->parse_command($msg);
     return 0 unless defined $cmd && length $cmd;
     $self->log("CMD: [$msg] is a PM command\n");
 
@@ -216,6 +231,9 @@ sub handle_pm_command {
         return 1;
     } elsif ($cmd eq 'friend') {
         # TODO: become friend/enemy
+    } elsif ($cmd eq 'butt') {
+        $self->buttify_message($who, 'msg', $args, 0);
+        return 1;
     }
 
     # do some authentication
@@ -260,6 +278,10 @@ sub handle_pm_command {
         $self->pm_reply($who, "Sorry, not implemented yet");
 
     } elsif ($cmd eq 'set-meme') {
+        if (!$self->config_bool('set_meme')) {
+            $self->pm_reply($who, "Changing the meme is disabled, sorry");
+            return 1;
+        }
         if ($args =~ m/^(\w+)/) {
             my $old_meme = $self->config('meme');
             $self->config('meme', $1);
@@ -281,13 +303,20 @@ sub handle_pm_command {
 }
 
 sub handle_channel_command {
-    my ($self, $who, $channel, $msg) = @_;
+    my ($self, $who, $channel, $msg, $addressed) = @_;
     # return false if we don't handle a command, so things can
     # be appropriately butted.
 
     $self->log("CMD: testing user command\n");
-    my ($cmd, $args) = _parse_command($msg);
+    # if we were addressed (as <foo> BotNick: CMD), don't require
+    # the command prefix char.  Otherwise do.
+    my ($cmd, $args) = $self->parse_command($msg, $addressed?0:1);
     return 0 unless defined $cmd && length $cmd;
+
+    if ($cmd eq 'butt') {
+        $self->buttify_message($who, $channel, $args, 1);
+        return 1;
+    }
 
     return 0; # TODO: unimplemented.
 
@@ -296,15 +325,17 @@ sub handle_channel_command {
 }
 
 sub buttify_message {
-    my ($self, $who, $where, $what) = @_;
+    my ($self, $who, $where, $what, $prefix_addressee) = @_;
     my $meme = $self->config('meme');
+
+    $prefix_addressee = 0 unless defined $prefix_addressee;
 
     my @butt_bits = split /\s+/, $what;
     my @butted_bits = Butts::buttify($meme, @butt_bits);
     my $butt_msg = join ' ', @butted_bits;
 
     $self->say(channel => $where, who => $who,
-               body => $butt_msg, address => 1);
+               body => $butt_msg, address => $prefix_addressee);
     1;
 }
 
@@ -350,7 +381,25 @@ sub config {
     if (defined $value) {
         $self->{settings}->{$key} = $value;
     }
+
+    $self->log("CFG: $key requested doesn't exist\n")
+      unless exists $self->{settings}->{$key};
+
     return $self->{settings}->{$key};
+}
+
+sub config_bool {
+    # types :(
+    my ($self, $key, $value) = @_;
+    if (defined $value) {
+        $self->{settings}->{$key} = $value?1:0;
+    }
+    my $val = $self->{settings}->{$key} || 0;
+    if ($val =~ m/(?:[tT]rue)|(?:[Yy]es)|1/) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 sub is_authed {
@@ -373,7 +422,7 @@ sub auth_set {
 
 sub log {
     my $self = shift;
-    if ($self->config('debug')) {
+    if ($self->config_bool('debug')) {
         $self->SUPER::log(@_);
     }
 }

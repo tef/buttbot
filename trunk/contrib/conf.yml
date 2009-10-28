@@ -6,11 +6,12 @@ connection:
     gecos: heh
     channels: ['#m00p']
 settings:
+    cmd_prefix: '!'
     meme:       butt
-    setmeme:    yes
-    changenick: yes
-    debug:      yes
-    invite:     yes
+    set_meme:   Yes
+    changenick: Yes
+    debug:      Yes
+    invite:     Yes
     pass:       moo
     friends:    { }
     enemies:    { }
