@@ -112,7 +112,7 @@ sub buttify {
         return @words;
     }
 
-    $self->log("Words remaining: ", 
+    $self->log("Word indices remaining: ",
                @word_idxs_len_sorted);
 
 	$self->log('Words in length order: '
@@ -127,16 +127,30 @@ sub buttify {
     # keep track of which we've done already so we can pick another.
     # there's probably a better way of doing this.
     my $words_butted = {};
+
+    # make sure we're not trying to butt too hard.
+    if ($how_many_butts > @word_idxs_len_sorted) {
+        $how_many_butts = scalar(@word_idxs_len_sorted);
+    }
+
     $self->log("buttifying with $how_many_butts repetitions");
+
 	for my $c (0 .. $how_many_butts-1) {
 
         # Boooooooooogocheck. We really need non-replacement picks.
         my $idx_to_butt;
+        my $iterations = 0;
         do {
+            $iterations++;
+            # break out if we've tried too much. Urgh.
+            if ($iterations > 10) {
+                return @words;
+            }
             my $random_idx  = get_walker_rand($xx_n, $xx_p, $xx_x);
             $idx_to_butt = $word_idxs_len_sorted[$random_idx];
         } until not exists($words_butted->{$idx_to_butt});
 
+        $self->log("bogocheck took $iterations iteration" . ($iterations>1?'s':''));
         $self->log("Butting word idx: $idx_to_butt [", $words[$idx_to_butt], "]");
 		$words[$idx_to_butt] = $self->_buttsub($words[$idx_to_butt]);
         $words_butted->{$idx_to_butt} = 1;
