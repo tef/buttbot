@@ -50,7 +50,7 @@ sub new {
     return $self;
 }
 
-# accessor for meme
+# accessors
 sub meme {
     my $self = shift;
     if (@_) {
@@ -59,6 +59,15 @@ sub meme {
     return $self->{meme}
 }
 
+sub replace_freq {
+    my $self = shift;
+    if (@_) {
+        $self->{replace_freq} = $_[0];
+    }
+    return $self->{replace_freq}
+}
+
+# helpers
 sub is_stop_word {
     my ($self, $word) = @_;
     return exists $self->{stopwords}->{lc($word)};
@@ -112,48 +121,32 @@ sub buttify {
         return @words;
     }
 
-    $self->log("Word indices remaining: ",
-               @word_idxs_len_sorted);
-
-	$self->log('Words in length order: '
-      . join(', ', map { $words[$_] } @word_idxs_len_sorted));
-
-    my @idx_weights = _sq_weight_indices (scalar @word_idxs_len_sorted);
-    $self->log('index1 weightings: ',
-               join(", ", @idx_weights));
-
-    my ($xx_n, $xx_p, $xx_x) = setup_walker_rand(\@idx_weights);
-
-    # keep track of which we've done already so we can pick another.
-    # there's probably a better way of doing this.
-    my $words_butted = {};
-
     # make sure we're not trying to butt too hard.
     if ($how_many_butts > @word_idxs_len_sorted) {
         $how_many_butts = scalar(@word_idxs_len_sorted);
     }
 
     $self->log("buttifying with $how_many_butts repetitions");
+    my $words_butted = {};
+
+    my ($non_butted_indices, $xx_n, $xx_p, $xx_x) 
+      = $self->_build_weighted_index(\@word_idxs_len_sorted, $words_butted);
 
 	for my $c (0 .. $how_many_butts-1) {
 
-        # Boooooooooogocheck. We really need non-replacement picks.
-        my $idx_to_butt;
-        my $iterations = 0;
-        do {
-            $iterations++;
-            # break out if we've tried too much. Urgh.
-            if ($iterations > 10) {
-                return @words;
-            }
-            my $random_idx  = get_walker_rand($xx_n, $xx_p, $xx_x);
-            $idx_to_butt = $word_idxs_len_sorted[$random_idx];
-        } until not exists($words_butted->{$idx_to_butt});
+        my $random_idx  = get_walker_rand($xx_n, $xx_p, $xx_x);
+        my $idx_to_butt = $non_butted_indices->[$random_idx];
 
-        $self->log("bogocheck took $iterations iteration" . ($iterations>1?'s':''));
-        $self->log("Butting word idx: $idx_to_butt [", $words[$idx_to_butt], "]");
-		$words[$idx_to_butt] = $self->_buttsub($words[$idx_to_butt]);
+        $self->log("Butting word idx: $idx_to_butt [",
+                   $words[$idx_to_butt], "]");
+
+		$words[$idx_to_butt]
+          = $self->_buttsub($words[$idx_to_butt]);
+
         $words_butted->{$idx_to_butt} = 1;
+        ($non_butted_indices, $xx_n, $xx_p, $xx_x) 
+          = $self->_build_weighted_index(\@word_idxs_len_sorted, $words_butted);
+
 	}
 
 	return @words;
@@ -195,7 +188,24 @@ sub _buttsub {
 	}
 	
 	substr($actual_word, $l, $r) = $butt;
-	return "$lp$actual_word$rp";
+	return $lp . $actual_word . $rp;
+}
+
+sub _build_weighted_index {
+    my $self = shift;
+    my (@indices) = @{ shift() },
+    my $butted_indices = shift;
+
+    $self->log("Word indices remaining: ", @indices);
+
+    my @non_butted_indices = grep { !exists ($butted_indices->{$_}) } @indices;
+    my @idx_weights = _sq_weight_indices(scalar @non_butted_indices);
+
+    $self->log('index weightings: ',
+               join(", ", @idx_weights));
+
+    my ($n, $p, $x) = setup_walker_rand(\@idx_weights);
+    return (\@non_butted_indices, $n, $p, $x)
 }
 
 sub _sq_weight_indices {
