@@ -35,6 +35,9 @@ sub init {
     $self->{authed_nicks} = {};
     $self->{in_channels} = {};
 
+    # TODO: should we pass more options in?
+    $self->{butter} = Butts->new(meme => $self->config('meme'));
+
     if ($self->config('debug')) {
         $self->log("DBG: Debugging output enabled\n");
     }
@@ -347,7 +350,10 @@ sub handle_pm_command {
         }
         if ($args =~ m/^(\w+)/) {
             my $old_meme = $self->config('meme');
+
             $self->config('meme', $1);
+            $self->{butter}->meme($1);
+
             $self->pm_reply($who, "Changed meme from [$old_meme] to [$1]");
         } else {
             $self->pm_reply($who, "Meme unchanged. Learn some syntax");
@@ -405,9 +411,7 @@ sub buttify_message {
 
     $prefix_addressee = 0 unless defined $prefix_addressee;
 
-    my @butt_bits = split /\s+/, $what;
-    my @butted_bits = Butts::buttify($meme, @butt_bits);
-    my $butt_msg = join ' ', @butted_bits;
+    my $butt_msg = $self->{butter}->buttify_string($what);
 
     if ($reply_as_emote) {
         $self->emote(channel => $where, who => $who,
