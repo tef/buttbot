@@ -17,5 +17,5 @@ settings:
     friends:    {shabble: 1, tef: 1 }
     enemies:    {}
     frequency:
-         friend: 10
+         friend: 1
          normal: 3
