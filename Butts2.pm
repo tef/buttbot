@@ -1,4 +1,4 @@
-package Butts2;
+package Butts;
 
 use strict;
 use warnings;
@@ -16,7 +16,7 @@ use fields qw/replace_freq
               debug/;
 
 sub new {
-    my Butts2 $self = shift;
+    my Butts $self = shift;
     unless (ref $self) {
         $self = fields::new($self);
     }

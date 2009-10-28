@@ -23,9 +23,8 @@ sub on_privmsg {
 	return 0 unless (rand(Irssi::settings_get_int("butt_frequency")) < 1);
 	return 0 if ($text =~ /^!|^http:\/\/\S+$|butt|^\W+$/i);
 
-	my @words = split(/\s+/, $text);
-	my @replaced_words = Butts::buttify("butt", @words);
-	my $replaced_text = join(" ", @replaced_words);
+    my $butter = Butts->new(meme => 'butt');
+	my $replaced_text = $butter->buttify_string($text);
 
 	unless ($text eq $replaced_text) {
 		Irssi::timeout_add_once(rand(8000) + 1000,
