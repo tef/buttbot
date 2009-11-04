@@ -1,10 +1,10 @@
 connection:
-    server: cowu.be
+    server: irc.synirc.net
     port: 6667
-    nick: butty
-    ident: null
-    gecos: heh
-    channels: ['#m33p']
+    nick: buttbot__
+    ident: buttbot
+    gecos: hello I am a new buttbot
+    channels: ['#buttbot']
 settings:
     cmd_prefix: '!'
     meme:       butt
@@ -13,9 +13,9 @@ settings:
     debug:      Yes
     invite:     Yes
     reload:     Yes # you probably don't want to change this.
-    pass:       moo
-    friends:    {shabble: 1, tef: 1 }
+    pass:       unconfigured
+    friends:    { tef: 1 }
     enemies:    {}
     frequency:
-         friend: 1
-         normal: 3
+         friend: 37
+         normal: 51

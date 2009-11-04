@@ -1,0 +1,9 @@
+You need to install:
+
+	TeX::Hyphen
+	Bot::BasicBot
+	POE
+	YAML::Any
+	Math::Random
+
+
