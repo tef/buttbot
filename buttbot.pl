@@ -209,8 +209,8 @@ sub handle_said_emoted {
     # address doesn't even get set unless it's true :(
     $address ||= 0;
 
-    print STDERR Dumper($ref);
-    print STDERR "\n---------\n";
+#    print STDERR Dumper($ref);
+#    print STDERR "\n---------\n";
 
     if ($channel ne 'msg') {
         my $addressed = $address ne 'msg';
@@ -392,7 +392,7 @@ sub handle_channel_command {
     return 0 unless defined $cmd && length $cmd;
 
     if ($cmd eq 'butt') {
-        $self->buttify_message($who, $channel, $args, 1);
+        $self->buttify_message($who, $channel, $args, 0,1);
         return 1;
     }
 
@@ -410,6 +410,7 @@ sub buttify_message {
     my $meme = $self->config('meme');
 
     $prefix_addressee = 0 unless defined $prefix_addressee;
+    $reply_as_emote = 0 unless defined $reply_as_emote;
 
     my $butt_msg = $self->{butter}->buttify_string($what);
 
