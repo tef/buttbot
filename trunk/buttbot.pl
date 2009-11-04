@@ -1,310 +1,552 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
+
+package main;
+
 use strict;
 use warnings;
+use Data::Dumper;
 
-use Butts qw(buttify);
-use IO::Socket;
+my $conf_file = $ARGV[0] || "./conf.yml";
+my $bot = BasicButtBot->new(config => $conf_file);
 
-$|++;
+# fly, my pretties, fly!
+$bot->run;
 
-my %CONF;
+package BasicButtBot;
 
-&readconf(@ARGV);
+use base qw/Bot::BasicBot/;
 
-my $socket = new IO::Socket::INET(
-    PeerAddr => $CONF{server},
-    PeerPort => $CONF{port},
-    proto    => 'tcp',
-    Type     => SOCK_STREAM,
-    Timeout  => 10
-) or die "socket: $!";
+# What would you like to Butt today?
+use Butts;
+# config-parsing is a bit passe.
+use YAML::Any;
+use Data::Dumper;
+# so we can hax our own handlers for things.
+use POE;
 
-_send("NICK $CONF{nick}");
-_send("USER $CONF{ident} 0 * :$CONF{gecos}");
+sub init {
+    my $self = shift;
 
-_fork() unless $CONF{debug};
+    $self->{settings}->{friends} = {};
+    $self->{settings}->{enemies} = {};
 
-my $auth = "";
+    $self->load_config(0);
 
-#list of friends (people who get buttified more often) and enemies (people who dont get butted.)
-my (%friends, %enemies);
-#frequency that normal people and friends get butted
-my ($normalfrequency, $friendfrequency);
-#last thing said by someone in the channel
-my (@previousdata);
-my ($previouschannel);
-my (%linestotal);
-my (%timeoflastbutting);
+    $self->{authed_nicks} = {};
+    $self->{in_channels} = {};
 
+    # TODO: should we pass more options in?
+    $self->{butter} = Butts->new(meme => $self->config('meme'));
 
-#pre-setting frequencies
-$friendfrequency = $CONF{friendfreq} || 37;
-$normalfrequency = $CONF{normfreq} || 51;
+    if ($self->config('debug')) {
+        $self->log("DBG: Debugging output enabled\n");
+    }
 
-#The meme.
-my $meme = $CONF{meme} || "butt";
-
-#remove whitespace!
-$CONF{channel} =~ s/\s+//;
-
-# add friends from conf file
-%friends = map {
-    (my $friend = $_) =~ s/^\s+|\s+$//g;
-
-    $friend, 1;
-} split /,/, $CONF{friends} if $CONF{friends};
-
-# add enemies from conf file
-%enemies = map {
-    (my $enemy = $_) =~ s/^\s+|\s+$//g;
-
-    $enemy, 1;
-} split /,/, $CONF{enemies} if $CONF{enemies};
-
-#== forever butting... ========================================================
-
-process() while 1;
-
-#== subroutines ===============================================================
-
-sub process {
-    die "main: $!" if $!;
-
-    process_line($_) for split /\n/, gets();
+    1;
 }
 
-sub cmd_pong {
-    my $command = shift @_;
-    pong($command =~ /^:\d+$/ ? $command : "$CONF{nick} $command")
+sub load_config {
+    my ($self, $reload) = @_;
+    $reload = 0 unless defined $reload;
+
+    my $config = YAML::Any::LoadFile($conf_file);
+
+    # only load these settings at startup.
+    unless ($reload) {
+        $self->{$_} = $config->{connection}->{$_}
+          for (keys %{$config->{connection}});
+    }
+
+    my ($old_friends, $old_enemies)
+      = ($self->{settings}->{friends},
+         $self->{settings}->{enemies});
+
+    $self->{settings}->{$_} = $config->{settings}->{$_}
+      for (keys %{$config->{settings}});
+
+    # merge the old copies with the new ones (in case we're reloading)
+
+    $self->{settings}->{friends}->{keys %$old_friends}
+      = values %{$old_friends};
+    $self->{settings}->{enemies}->{keys %$old_enemies}
+      = values %{$old_enemies};
 }
 
-sub process_line {
-    my $line = shift;
-    print "$line\n";
+#@OVERRIDE
+sub start_state {
+    # in ur states, adding extra events so we can invite and shiz.
+    my ( $self, $kernel, $session ) = @_[ OBJECT, KERNEL, SESSION ];
+    my $ret = $self->SUPER::start_state($self, $kernel, $session);
+    $kernel->state('irc_invite', $self, 'handle_invite');
+    $kernel->state('irc_405', $self, 'handle_err_too_many_chans');
 
-    my ($from, $command, @data) = split /\s+/, $line;
-
-    $from    = defined $from    ? $from    : '';
-    $command = defined $command ? $command : '';
-
-    die "from server: @data" if $from eq 'ERROR';
-
-    # if server pings, ping back.
-
-    if ($from eq 'PING') {
-        cmd_pong($command);
-    }
-
-    # If buttbot has successfully connected to the server, join a channel.
-    if ($command eq '001') {
-        cmd_connect();
-
-    # otherwise, if it's a message
-    } elsif ($command eq 'PRIVMSG') {
-        cmd_privmsg($from, @data);
-
-    } elsif ($command eq 'INVITE' && $CONF{'invite'} ) {
-        my $c = $data[1];
-        $c =~ s/^://;
-        _send("JOIN $c");
-    }
-        
+    return $ret;
 }
 
-sub cmd_connect {
-    _send("MODE $CONF{nick} -x"); # hiding hostnames is for wimps.
-    if (defined $CONF{channel}) {
-        _send("JOIN $CONF{channel}") ;
-    }
-
-    if (defined $CONF{nickpass})
-    {
-        _send("NICKSERV :identify $CONF{nickpass}");
-    }
+sub handle_err_too_many_chans {
+    my ($self, $server, $msg_text, $msg_parsed)
+      = @_[OBJECT, ARG0, ARG1, ARG2];
+    $self->log("IRC: too many channels:\n" . Dumper($msg_parsed) . "\n");
+    # TODO: how can we let the user who requested us know that we're
+    # unable to comply?  Maybe keep a queue of pending commands, and
+    # only respond ok/err when we get an appropriate response from server.
+    return;
 }
 
-sub cmd_privmsg {
-    my($from, @data) = @_;
-
-    # get destination of message
-    my $to = shift @data;
-
-    # get first word of message (might be command)
-    my $sub = shift @data;
-
-    ## remove preceding ':'
-    $sub =~ s/^://;
-
-    # if a user private messages the bot...
-    if ($to eq $CONF{nick}) {
-        pm_bot($from, $sub, @data);
-
-    #if messages come from channel, start buttifying
-    } elsif ($to =~ /^\#/) {
-        pm_channel($from, $to, $sub, @data);
-    
-    }
-}
-
-sub pm_bot {
-    my ($from, $sub, @data) = @_;
-
-    my $to = $from;
-
-    $to =~ s/^:(.*)!.*$/$1/;
-    #If the command is !butt, buttify message.
-    
-    ##if the first word in the string is equal to the password, set the user to be the admin
-    if ($sub eq "!auth" && $data[0] eq $CONF{pass}) {
-        $auth=$from;
-        _send("PRIVMSG $to :Authed.");
-    } elsif ($sub eq "!$meme" and @data >0 ) {
-	my @bread_and = &buttify($meme, @data);
-	# comparing lists is piss easy in python :(
-	my $jam = join(" ", @data);
-	my $cock = join(" ", @bread_and);
-	_send("PRIVMSG $to :$cock") if ($jam ne $cock); 
-    }
-
-    ##ADMIN FUNCTIONS
-    if ($auth eq $from)  {
-        if ($sub eq "!join" and @data > 0) {
-            $CONF{channel} = $CONF{channel}.",";
-            $CONF{channel} = $CONF{channel}.$data[0];
-            _send("JOIN $data[0]");
-        } elsif ($sub eq "!leave" and @data > 0) {
-            $CONF{channel} =~ s/$data[0]//;
-            _send("PART $data[0]");
-        } elsif ( $sub eq "!meme" and ($CONF{setmeme} ne "no") and @data >0 ) {
-            $meme = $data[0];
-            _send("PRIVMSG $to :Meme changed to $meme.");
-            if ($CONF{changenick} ne 'no') {
-                $CONF{nick} = $meme."bot";
-                _send("NICK :$CONF{nick}");
-            }
-        }
-    }
-}
-
-sub pm_channel {
-    my ($from, $to, $sub, @data) = @_;
-
-    my $sender = $from;
-
-    $sender =~ s/^:(.*)!.*$/$1/;
-    if (exists $linestotal{$to}) {
-        $linestotal{$to}++;
+sub handle_invite {
+    my ($self, $inviter, $channel) = @_[OBJECT, ARG0, ARG1];
+    $inviter = $self->nick_strip($inviter);
+    if ($self->config_bool('invite')) {
+        $self->log("IRC: Going to join $channel, invited by $inviter\n");
     } else {
-        $linestotal{$to} = 1;
+        $self->pm_reply($inviter, "Sorry, inviting is disabled by the admin.");
+        $self->log("IRC: invite refused from $inviter to $channel\n");
     }
-
-    ##ignores statements from cout and users containing the word "bot"
-    if (($from !~/^:cout/) && ($from !~/^:[^!]*bot[^!]*!/i)) {
-        if ($sub !~ /^!/ && ($sub !~ /^\./)) {
-            my $rnd = 1;
-            unshift (@data,$sub);
-            if (@data > 1) {
-                #if it's a enemy, don't buttify message. If friend, buttify message more often.
-                $rnd = tobuttornottobutt($sender);
-            }
-                  
-            #if the random number is 0, buttify that data
-            if ($rnd ==0) {
-                $timeoflastbutting{$to} = time;
-                sleep(@data*0.2 + 1);
-                # if the message is a CTCP line, avoid replacing
-                # the CTCP command in the first word
-                if (substr($data[0], 0, 1) eq "\1") {
-                    # only butt if the command is not the only word
-                    if (@data > 1 && $data[1] ne "\1") {
-                        my $first = shift(@data);
-                        my @butted = &buttify($meme, @data);
-                        unshift(@butted, $first);
-
-                        my $jam = join(" ", @data);
-                        my $cock = join(" ", @butted);
-                        _send("PRIVMSG $to :$cock") if ($jam ne $cock); 
-                    }
-                } else {
-                     my @bread_and = &buttify($meme, @data);
-                     # comparing lists is piss easy in python :(
-                     my $jam = join(" ", @data);
-                     my $cock = join(" ", @bread_and);
-                     _send("PRIVMSG $to :$cock") if ($jam ne $cock); 
-                }
-            }
-        } elsif ($sub eq "!$meme" && @data >0 ) {
-            if (($data[0] !~ /^!/) && ($data[0] !~ /^cout/)) {
-                my @bread_and = &buttify($meme, @data);
-                # comparing lists is piss easy in python :(
-                my $jam = join(" ", @data);
-                my $cock = join(" ", @bread_and);
-                if ($CONF{buttcommand} ne 'no') {
-                  _send("PRIVMSG $to :$cock") if ($jam ne $cock); 
-                } else {
-                  _send("PRIVMSG $sender :$cock") if ($jam ne $cock); 
-                }
-            }
-        }
-    }
+    $self->join_channel($channel);
 }
 
-#for future determining of butting
-sub tobuttornottobutt
-{
-    my($rnd, $sender);
-    $sender = shift;
-    if (exists $enemies{$sender}) {
-        $rnd = 1;
-    } elsif (exists $friends{$sender}) { 
-        $rnd = int(rand(int($friendfrequency)));
-    } else {
-        $rnd = int(rand(int($normalfrequency)));
-    }
-    return $rnd;
+sub join_channel {
+    my ($self, $channel, $key) = @_;
+    $key = '' unless defined $key;
+    $self->log("IRC: Joining channel [$channel]\n");
+    $poe_kernel->post($self->{IRCNAME}, 'join', $channel, $key);
 }
 
-sub gets {
-  my $data = "";
-  $socket->recv($data, 1024);
-
-  return $data;
+sub leave_channel {
+    my ($self, $channel, $part_msg) = @_;
+    $part_msg ||= "ButtBot Go Byebye!";
+    $self->log("IRC: Leaving channel [$channel]: \"$part_msg\"\n");
+    $poe_kernel->post($self->{IRCNAME}, 'part', $channel, $part_msg);
 }
 
-sub pong {
-    _send("PONG $_[0]");
+sub change_nick {
+    my ($self, $new_nick) = @_;
+    $poe_kernel->post($self->{IRCNAME}, 'nick', $new_nick);
+    $self->log("IRC: changing nick to $new_nick\n");
 }
 
-sub _send {
-  $socket->send("@_\n");
-}
-
-sub _fork {
-    my $spoon = fork;
-
-    if (defined $spoon) {
-        if ($spoon == 0) { # is child process
-            return;
+sub in_channel {
+    my ($self, $channel, $present) = @_;
+    if (defined $present) {
+        if (!$present) {
+            delete $self->{in_channels}->{$channel}
+              if exists $self->{in_channels}->{$channel};
         } else {
-            print "exiting, child pid = $spoon\n";
-            exit;
+            $self->{in_channels}->{$channel} = 1;
         }
+    }
+    return $self->{in_channels}->{$channel};
+}
+
+sub get_all_channels {
+    my ($self) = @_;
+    return keys %{ $self->{in_channels} };
+}
+
+
+sub nick_change {
+    my ($self, $from, $to) = @_;
+
+    if ($self->is_me($from)) {
+        $self->{nick} = $to;
+        $self->log("IRC: changed own nick from $from to $to\n");
+    }
+    return;
+}
+
+sub chanjoin {
+    my ($self, $ref) = @_;
+    my ($channel, $who) = @{$ref}{qw/channel who/};
+    $self->log("IRC: [$channel] $who joined\n");
+
+    if ($self->is_me($who)) {
+        $self->in_channel($channel, 1);
+    }
+    return;
+}
+
+sub chanpart {
+    my ($self, $ref) = @_;
+    my ($channel, $who) = @{$ref}{qw/channel who/};
+    $self->log("IRC: [$channel] $who left\n");
+
+    if ($self->is_me($who)) {
+        $self->in_channel($channel, 0);
+    }
+    return;
+}
+
+sub kicked {
+    my ($self, $ref) = @_;
+    my ($channel, $who, $who_by, $why) =
+      @{$ref}{qw/channel kicked who reason/};
+
+    $self->log("$who just got kicked from $channel by $who_by: \"$why\"\n");
+    if ($self->is_me($who)) {
+        $self->in_channel($channel, 0);
+    }
+    return;
+}
+
+# TODO: refactor these 3 better. Emote should never have to deal with commands
+# or prefixes.  Just a message to be re-butted.
+sub emoted {
+    my ($self, $ref) = @_;
+    $self->handle_said_emoted($ref, 1);
+}
+
+sub said {
+    my ($self, $ref) = @_;
+    $self->handle_said_emoted($ref, 0);
+}
+
+sub handle_said_emoted {
+    my ($self, $ref, $reply_as_emote) = @_;
+    # slicin' ma hashes.
+    my ($channel, $body, $address, $who) =
+      @{$ref}{qw/channel body address who/};
+
+    # address doesn't even get set unless it's true :(
+    $address ||= 0;
+
+    print STDERR Dumper($ref);
+    print STDERR "\n---------\n";
+
+    if ($channel ne 'msg') {
+        my $addressed = $address ne 'msg';
+        # normal command
+        # eg: <bob> ButtBot: stop it
+        return if $self->handle_channel_command($who,
+                                                $channel,
+                                                $body,
+                                                $addressed);
+    } elsif ($channel eq 'msg') {
+        # parse for command
+        return if $self->handle_pm_command($who, $body);
+    }
+
+    # butting is the default behaviour.
+    $self->log("BUTT: Might butt\n");
+    if ($self->to_butt_or_not_to_butt($who, $body)) {
+        $self->log("BUTT: Butting $who in [$channel]\n");
+        $self->buttify_message($who, $channel, $body, $reply_as_emote, 0);
+    }
+
+    return;
+}
+
+sub parse_command {
+    my ($self, $msg, $require_prefix) = @_;
+    my $cmd_prefix = quotemeta($self->config('cmd_prefix'));
+
+    $require_prefix = 1 unless defined $require_prefix;
+    if (!$require_prefix) {
+        $cmd_prefix .= '?';
+    }
+
+    if ($msg =~ m/^$cmd_prefix([\w_-]+)\s*(.*)$/) {
+        return ($1, $2);
     } else {
-        die "fork: $!";
+        return ();
     }
 }
 
-sub readconf {
-    my $file = shift;
-    ($file = $0) =~ s/\.pl$/\.conf/i unless defined $file;
+sub _parse_channel {
+    # parse a string into a channel (optionally with a leading # or &), and the
+    # remainder of the string.
+    my ($str) = @_;
+    if ($str =~ m/^([#&]?)([^,\s\x07]+)\s*(.*)$/) {
+        return ($1.$2, $3) if $1;
+        return ('#'.$2, $3);
+    }
+    return (undef, $str);
+}
 
-    open my($fh), $file or die "readconf: cannot open $file";
+sub pm_reply {
+    my ($self, $who, $msg) = @_;
+    $self->say(who => $who, channel => 'msg', body => $msg);
+}
 
-    while (<$fh>) {
-        next if /^\#/;
+# TODO: handle de-authentication when nick changes(?) or leaves all shared
+# channels.
+sub handle_pm_command {
+    my ($self, $who, $msg) = @_;
 
-        if (/^\s*([^\s]+)\s*=\s*(.+)$/) {
-            $CONF{lc($1)} = $2;
+    $self->log("CMD: testing for PM command: [$who], [$msg]\n");
+
+    my ($cmd, $args) = $self->parse_command($msg);
+    return 0 unless defined $cmd && length $cmd;
+    $self->log("CMD: [$msg] is a PM command\n");
+
+    # commands that don't need authentication
+    # NB: They need to call return or they'll hit the auth barrier.
+    if ($cmd eq 'auth') {
+        if ($args eq $self->config('pass')) {
+            $self->auth_set($who, 1);
+            $self->pm_reply($who, "Hello again!");
+        } else {
+            $self->pm_reply($who, "Authentication Failed :(");
+        }
+        return 1;
+    } elsif ($cmd eq 'friend') {
+        # TODO: become friend/enemy
+    } elsif ($cmd eq 'butt') {
+        $self->buttify_message($who, 'msg', $args, 0);
+        return 1;
+    }
+
+    # do some authentication
+    unless ($self->is_authed($who)) {
+        $self->pm_reply($who, "You're not authenticated :(");
+        return 1;
+    }
+
+    # TODO: command to query/set butt frequencies?
+
+
+    # commands that *do* need authentication
+    if ($cmd eq 'join') {
+        my ($arg_chan, $arg_rem) = _parse_channel($args);
+        if (defined $arg_chan) {
+            if ($self->in_channel($arg_chan)) {
+                $self->pm_reply($who, "I'm already in that channel!");
+            } else {
+                $self->join_channel($arg_chan);
+                $self->pm_reply($who, "Joining channel $1");
+            }
+        } else {
+            $self->pm_reply($who, "I needs a channel name please.");
+        }
+
+    } elsif ($cmd eq 'leave') {
+        my ($arg_chan, $arg_msg) = _parse_channel($args);
+        if (defined $arg_chan) {
+            if (!$self->in_channel($arg_chan)) {
+                $self->pm_reply($who, "I'm not in that channel!");
+            } else {
+                $self->leave_channel($arg_chan, $arg_msg);
+                $self->pm_reply($who, "Ok.");
+            }
+        } else {
+            $self->pm_reply($who, "I needs a channel name please. "
+                            . "Also maybe a message.");
+        }
+
+    } elsif ($cmd eq 'change-nick') {
+        unless ($self->config_bool('changenick')) {
+            $self->pm_reply($who, "Sorry, changing nicks is disabled.");
+            return 1;
+        }
+        if ($args =~ m/^(\w+)/) {
+            $self->change_nick($1);
+            $self->pm_reply($who, "Ok.");
+        } else {
+            $self->pm_reply($who, "Can't change it to that, boss");
+        }
+    } elsif ($cmd eq 'set-meme') {
+        unless ($self->config_bool('set_meme')) {
+            $self->pm_reply($who, "Changing the meme is disabled, sorry");
+            return 1;
+        }
+        if ($args =~ m/^(\w+)/) {
+            my $old_meme = $self->config('meme');
+
+            $self->config('meme', $1);
+            $self->{butter}->meme($1);
+
+            $self->pm_reply($who, "Changed meme from [$old_meme] to [$1]");
+        } else {
+            $self->pm_reply($who, "Meme unchanged. Learn some syntax");
+        }
+    } elsif ($cmd eq 'deauth') {
+        $self->auth_set($who, 0);
+        $self->pm_reply($who, "Ok. See you again sometime");
+    } elsif ($cmd eq 'channel-list') {
+        my @channels = $self->get_all_channels;;
+        $self->pm_reply($who, "I'm in: " . join(', ', @channels));
+    } elsif ($cmd eq 'reload') {
+        unless ($self->config_bool('reload')) {
+            $self->pm_reply($who, "Reloading is disabled.");
+            return 1;
+        }
+        # reload settings, but not connection info.
+        $self->load_config(1);
+        $self->pm_reply($who, "Config reloaded");
+
+    } else {
+        $self->pm_reply($who, "Dunno what you want.");
+    }
+
+    return 1;
+}
+
+sub handle_channel_command {
+    my ($self, $who, $channel, $msg, $addressed) = @_;
+    # return false if we don't handle a command, so things can
+    # be appropriately butted.
+
+    $self->log("CMD: testing user command\n");
+    # if we were addressed (as <foo> BotNick: CMD), don't require
+    # the command prefix char.  Otherwise do.
+    my ($cmd, $args) = $self->parse_command($msg, $addressed?0:1);
+    return 0 unless defined $cmd && length $cmd;
+
+    if ($cmd eq 'butt') {
+        $self->buttify_message($who, $channel, $args, 1);
+        return 1;
+    }
+
+    return 0;
+
+    # TODO: !stopit - adds them to the enemies list.
+    # TODO: !butt - randomly butts something?
+}
+
+sub buttify_message {
+    my ($self, $who, $where,
+        $what, $reply_as_emote,
+        $prefix_addressee) = @_;
+
+    my $meme = $self->config('meme');
+
+    $prefix_addressee = 0 unless defined $prefix_addressee;
+
+    my $butt_msg = $self->{butter}->buttify_string($what);
+
+    unless ($self->_was_string_butted($what, $butt_msg)) {
+        $self->log("BUTT: String \"$butt_msg\" wasn't butted");
+        return 0;
+    }
+
+    if ($reply_as_emote) {
+        $self->emote(channel => $where, who => $who,
+                   body => $butt_msg, address => 0);
+    } else {
+        $self->say(channel => $where, who => $who,
+                   body => $butt_msg, address => $prefix_addressee);
+    }
+    return;
+}
+
+sub to_butt_or_not_to_butt {
+    my ($self, $sufferer, $message) = @_;
+    my $rnd_max = 0;
+    my $frequencies = $self->config('frequency');
+
+    return 0 if $self->might_be_a_bot($sufferer);
+
+    # Fixes issue 6.
+    unless ($self->_is_string_buttable($message)) {
+        $self->log("BUTT: String is not buttable");
+        return 0;
+    }
+
+    if ($self->is_enemy($sufferer)) {
+        $self->log("BUTT: [$sufferer:enemy] not butting\n");
+        return 0;
+    } elsif ($self->is_friend($sufferer)) {
+        $rnd_max = $frequencies->{friend};
+        $self->log("BUTT: [$sufferer:friend] prob is 1/$rnd_max\n");
+    } else {
+        $rnd_max = $frequencies->{normal};
+        $self->log("BUTT: [$sufferer:normal] prob is 1/$rnd_max\n");
+    }
+    my $rnd = int rand $rnd_max;
+    return ($rnd==0);
+}
+
+# FIX for
+# http://code.google.com/p/buttbot/issues/detail?id=6
+# Message must contain at least some word characters that we can butt.
+sub _is_string_buttable {
+    my ($self, $str) = @_;
+    return $str =~ m/[a-zA-Z]+/;
+}
+
+# test if a string is the same as it was pre- and post-butting.
+# returns true if strings are different
+sub _was_string_butted {
+    my ($self, $in, $out) = @_;
+    my $meme = $self->config('meme');
+
+    # we can't trust whitespace, since we might have trimmed it differently.
+    $in =~ s/\s+//g;
+    $out =~ s/\s+//g;
+    return (lc($in) ne lc($out)) && ($out =~ m/\Q$meme\E/i);
+}
+
+sub might_be_a_bot {
+    my ($self, $who) = @_;
+    return ($who =~ m/cout|(?:bot$)/i);
+}
+
+sub is_enemy {
+    my ($self, $who) = @_;
+    my $enemies = $self->config('enemies');
+    return exists $enemies->{$who}
+}
+
+sub is_friend {
+    my ($self, $who) = @_;
+    my $friends = $self->config('friends');
+    return exists $friends->{$who}
+}
+
+sub is_me {
+    my ($self, $who) = @_;
+    # TODO: support B::BBot's alt_nicks param too?
+    return $self->{nick} eq $who;
+}
+
+sub config {
+    my ($self, $key, $value) = @_;
+    if (defined $value) {
+        $self->{settings}->{$key} = $value;
+    }
+
+    $self->log("CFG: $key requested doesn't exist\n")
+      unless exists $self->{settings}->{$key};
+
+    return $self->{settings}->{$key};
+}
+
+sub config_bool {
+    # types :(
+    my ($self, $key, $value) = @_;
+    if (defined $value) {
+        $self->{settings}->{$key} = $value?1:0;
+    }
+    my $val = $self->{settings}->{$key} || 0;
+    if ($val =~ m/(?:[tT]rue)|(?:[Yy]es)|1/) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+sub is_authed {
+    my ($self, $nick) = @_;
+    return exists($self->{authed_nicks}->{$nick});
+}
+
+sub auth_set {
+    my ($self, $nick, $auth) = @_;
+    if ($auth) {
+        $self->{authed_nicks}->{$nick} = 1;
+    } else {
+        if ($self->is_authed($nick)) {
+            delete($self->{authed_nicks}->{$nick});
+        } else {
+            $self->log("Trying to de-auth someone who isn't authenticated: $nick\n");
         }
     }
 }
+
+sub log {
+    my $self = shift;
+    if ($self->config_bool('debug')) {
+        $self->SUPER::log(@_);
+    }
+}
+1;
+
