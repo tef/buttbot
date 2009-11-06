@@ -2,8 +2,8 @@ connection:
     server: irc.synirc.net
     port: 6667
     nick: buttbot__
-    ident: buttbot
-    gecos: hello I am a new buttbot
+    username: buttbot
+    name: hello I am a new buttbot
     channels: ['#buttbot']
 settings:
     cmd_prefix: '!'
