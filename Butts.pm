@@ -6,7 +6,7 @@ use warnings;
 use Math::Random;
 use TeX::Hyphen;
 use Data::Dumper;
-use FindBin qw($Bin);
+use FindBin qw($RealBin);
 use Carp;
 
 use fields qw/replace_freq
@@ -26,8 +26,8 @@ sub new {
     }
 
 
-    my %args = (hyphen_file    => "$Bin/hyphen.tex",
-                stopwords_file => "$Bin/stopwords",
+    my %args = (hyphen_file    => "$RealBin/hyphen.tex",
+                stopwords_file => "$RealBin/stopwords",
                 debug          => 0,
                 meme           => 'butt',
                 replace_freq   => (1/11), # original value from tef.
