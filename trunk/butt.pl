@@ -5,7 +5,7 @@ use warnings;
 use Butts;
 
 my $butt = $ARGV[0]         // "butt";
-my $replace_freq = $ARGV[1] // 0.5;
+my $replace_freq = $ARGV[1] // (1/11);
 my $debug = $ARGV[2]        // 0;
 
 my $buttifier = Butts->new(meme         => $butt,
