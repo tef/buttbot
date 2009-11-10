@@ -181,6 +181,7 @@ sub kicked {
     my ($channel, $who, $who_by, $why) =
       @{$ref}{qw/channel kicked who reason/};
 
+    $who_by = $who_by || "<UNKNOWN>";
     $self->log("$who just got kicked from $channel by $who_by: \"$why\"\n");
     if ($self->is_me($who)) {
         $self->in_channel($channel, 0);
