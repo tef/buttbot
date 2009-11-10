@@ -2,6 +2,10 @@
 use strict;
 use warnings;
 
+BEGIN {
+    use FindBin qw($Bin);
+    push @INC, $Bin;
+}
 use Butts;
 
 my $butt = $ARGV[0]         // "butt";
