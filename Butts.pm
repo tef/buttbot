@@ -136,7 +136,7 @@ sub is_meme {
 sub split_preserving_whitespace {
     my ($string) = @_;
 
-    my ($leading_ws, $remainder) = ($string =~ m/^(\s*)(.*)$/);
+    my ($leading_ws, $remainder) = ($string =~ m/^(\s*)(.*)$/s);
     $leading_ws //= '';
 
     my @all_split = split(/(\s+)/, $remainder);

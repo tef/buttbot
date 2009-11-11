@@ -25,10 +25,8 @@ POE::Component::Server::TCP->new
        my ($kernel, $session, $heap, $input) = @_[KERNEL, SESSION, HEAP, ARG0];
        #print "Session ", $session->ID(), " got input: $input\n";
 
-       my @fortune = `$fortune`; # ick. But Fortune.pm is shit.
-       foreach my $line (@fortune) {
-           $heap->{client}->put($butter->buttify_string($line));
-       }
+       my $fortune_str = qx/$fortune/; # ick. But Fortune.pm is shit.
+       $heap->{client}->put($butter->buttify_string($fortune_str));
        $kernel->yield("shutdown");
    }
   );
