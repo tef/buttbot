@@ -1,3 +1,32 @@
+=head1 NAME
+
+Butts - replace random syllables with the arbitrary memes.
+
+=head1 SYNOPSIS
+
+  # with all defaults
+  my $butter = Butts->new;
+  $butter->buttify_string("hello there");
+
+  # with all known options
+  my $butter = Butts->new(
+      meme => 'butt',
+      replace_freq => (1/11),
+      debug => 0,
+      hyphen_file => 'hyphens.tex',
+      stopwords_file => 'stopwords',
+  );
+
+  $butter->buttify(@tokens);
+  $butter->buttify_string($string);
+
+
+=head1 DESCRIPTION
+
+Yes.
+
+=cut
+
 package Butts;
 
 use strict;
@@ -18,6 +47,10 @@ use fields qw/replace_freq
               debug
               _words
               _word_indices/;
+
+=head1 METHODS
+
+=cut
 
 sub new {
     my Butts $self = shift;
@@ -55,6 +88,14 @@ sub new {
     return $self;
 }
 
+=head2 meme($value)
+
+Method which sets / returns the current replacement meme.  If called without
+additional arguments, it returns the current meme. Calling it with a scalar
+replaces the old meme with a new one.
+
+=cut
+
 # accessors
 sub meme {
     my $self = shift;
@@ -63,6 +104,14 @@ sub meme {
     }
     return $self->{meme}
 }
+
+=head2 replace_freq($value)
+
+Getter/Setter Method for the replacement frequency.  Value should be passed as a
+fractional value, which corresponds to the number of words considered for meme
+replacement via the following calculation:
+
+=cut
 
 sub replace_freq {
     my $self = shift;
