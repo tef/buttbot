@@ -56,7 +56,7 @@ use warnings;
     use Math::Random;
     use TeX::Hyphen;
     use Data::Dumper;
-    use FindBin qw($RealBin);
+    use Dir::Self;
     use Carp;
 
 
@@ -80,14 +80,14 @@ use warnings;
       (
        isa     => 'Str',
        is      => 'ro',
-       default => sub { $RealBin . '/hyphen.tex' },
+       default => sub { __DIR__ . '/hyphen.tex' },
       );
 
     has 'stopwords_file' =>
       (
        isa     => 'Str',
        is      => 'ro',
-       default => sub { $RealBin . '/stopwords' },
+       default => sub { __DIR__ . '/stopwords' },
       );
 
     has 'debug' =>
