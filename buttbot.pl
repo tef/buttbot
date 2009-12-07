@@ -214,7 +214,8 @@ sub handle_said_emoted {
 #    print STDERR "\n---------\n";
 
     if ($channel ne 'msg') {
-        my $addressed = $address ne 'msg';
+        # address is what is stripped off the front 
+        my $addressed = $address && $address ne 'msg';
         # normal command
         # eg: <bob> ButtBot: stop it
         return if $self->handle_channel_command($who,
