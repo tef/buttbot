@@ -276,7 +276,7 @@ sub handle_pm_command {
 
     $self->log("CMD: testing for PM command: [$who], [$msg]\n");
 
-    my ($cmd, $args) = $self->parse_command($msg);
+    my ($cmd, $args) = $self->parse_command($msg,0);
     return 0 unless defined $cmd && length $cmd;
     $self->log("CMD: [$msg] is a PM command\n");
 
@@ -293,7 +293,10 @@ sub handle_pm_command {
     } elsif ($cmd eq 'friend') {
         # TODO: become friend/enemy
     } elsif ($cmd eq $self->config('meme')) {
-        $self->buttify_message($who, 'msg', $args, 0);
+        my $ret = $self->buttify_message($who, 'msg', $args, 0);
+        if (!$ret) {
+            $self->pm_reply($who, "Sorry, can't ".$self->config('meme'));
+        }
         return 1;
     }
 
@@ -428,7 +431,7 @@ sub buttify_message {
         $self->say(channel => $where, who => $who,
                    body => $butt_msg, address => $prefix_addressee);
     }
-    return;
+    return 1;
 }
 
 sub to_butt_or_not_to_butt {

@@ -179,6 +179,10 @@ C<STDERR>.
         my ($self, $word) = @_;
         return exists $self->stopwords->{lc($word)};
     }
+    sub is_url {
+        my ($self, $word) = @_;
+        return $word =~ /^https?:\/\//i;
+    }
 
     sub is_meme {
         my ($self, $word) = @_;
@@ -278,8 +282,9 @@ C<$self-E<gt>meme>.
             my $is_word = $word !~ /^[\d\W+]+$/;
             my $is_stop = $self->is_stop_word($word);
             my $is_meme = $self->is_meme($word);
+            my $is_url  = $self->is_url($word);
 
-            $is_word and not $is_stop and not $is_meme;
+            $is_word and not $is_stop and not $is_meme and not $is_url;
         } @word_idxs_len_sorted;
 
         $self->_set_word_indices(\@word_idxs_len_sorted);
