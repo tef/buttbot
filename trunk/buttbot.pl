@@ -292,7 +292,7 @@ sub handle_pm_command {
         return 1;
     } elsif ($cmd eq 'friend') {
         # TODO: become friend/enemy
-    } elsif ($cmd eq 'butt') {
+    } elsif ($cmd eq $self->config('meme')) {
         $self->buttify_message($who, 'msg', $args, 0);
         return 1;
     }
@@ -393,7 +393,7 @@ sub handle_channel_command {
     my ($cmd, $args) = $self->parse_command($msg, $addressed?0:1);
     return 0 unless defined $cmd && length $cmd;
 
-    if ($cmd eq 'butt') {
+    if ($cmd eq $self->config('meme')) {
         $self->buttify_message($who, $channel, $args, 0,1);
         return 1;
     }
