@@ -483,7 +483,7 @@ sub _was_string_butted {
     # we can't trust whitespace, since we might have trimmed it differently.
     $in =~ s/\s+//g;
     $out =~ s/\s+//g;
-    return (lc($in) ne lc($out)) && ($out =~ m/\Q$meme\E/i);
+    return (lc($in) ne lc($out));
 }
 
 sub might_be_a_bot {
