@@ -433,7 +433,7 @@ sub buttify_message {
                        body => $butt_msg, address => $prefix_addressee);
         }
     } else {
-        $self->log("BUTT: butting resulted in \"butt\" and discarded.");
+        $self->log("BUTT: butting resulted in solo butt and was discarded.");
     }
 
     return 1;
