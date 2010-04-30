@@ -335,6 +335,31 @@ C<$self-E<gt>meme>.
         return @words;
     }
 
+    sub _find_repeating_vowel {
+        my ($self, $word) = @_;
+        my $vowels = "aeiouAEIOU";
+
+        my $j = 0;
+        my $j_record = 0;
+        my $k_record = 0;
+        while ($j < length($word)) {
+            if (index($vowels, substr($word,$j,1)) > -1) {
+                # $word[$j] is a vowel; how many times does it repeat?
+                my $k = 0;
+                do {
+                    ++$k;
+                } while (($j + $k < length($word)) && (substr($word,$j+$k,1) eq substr($word,$j,1)));
+        # save the vowel that repeats most
+                if ($k > $k_record) {
+                    $j_record = $j;
+                    $k_record = $k;
+                }
+            }
+            ++$j;
+        }
+        return ($j_record, $k_record);
+    }
+
     sub _buttsub {
         my ($self, $word) = @_;
 
@@ -368,6 +393,14 @@ C<$self-E<gt>meme>.
             $butt = uc($meme);
         } elsif ($sub =~/^[A-Z]/) {
             $butt = ucfirst($meme);
+        }
+
+        my ($j, $k) = $self->_find_repeating_vowel($sub);
+
+        if ($k > 2) {
+                my $k2;
+                ($j, $k2) = $self->_find_repeating_vowel($butt);
+                substr($butt, $j, 1) = substr($butt, $j, 1) x $k;
         }
 
         substr($actual_word, $l, $r) = $butt;

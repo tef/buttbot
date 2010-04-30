@@ -424,13 +424,18 @@ sub buttify_message {
         return 0;
     }
 
-    if ($reply_as_emote) {
-        $self->emote(channel => $where, who => $who,
-                   body => $butt_msg, address => 0);
+    unless ($butt_msg eq $meme) {
+        if ($reply_as_emote) {
+            $self->emote(channel => $where, who => $who,
+                       body => $butt_msg, address => 0);
+        } else {
+            $self->say(channel => $where, who => $who,
+                       body => $butt_msg, address => $prefix_addressee);
+        }
     } else {
-        $self->say(channel => $where, who => $who,
-                   body => $butt_msg, address => $prefix_addressee);
+        $self->log("BUTT: butting resulted in \"butt\" and discarded.");
     }
+
     return 1;
 }
 
