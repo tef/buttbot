@@ -194,7 +194,7 @@ C<STDERR>.
         my ($self, $string) = @_;
 
         my ($leading_ws, $remainder) = ($string =~ m/^(\s*)(.*)$/s);
-        $leading_ws //= '';
+        $leading_ws = defined $leading_ws ? $leading_ws : '';
 
         my @all_split = split(/(\s+)/, $remainder);
         my (@words, @ws);
